@@ -17,8 +17,8 @@ class DataFetcher:
         stock  = yf.Ticker(ticker)
         if start and end:
             hist = stock.history(period=period, interval=interval, start=start, end=end, auto_adjust=False)
-        hist = stock.history(period=period, interval=interval, auto_adjust=False)
-        print(stock.history_metadata)
+        else:
+            hist = stock.history(period=period, interval=interval, auto_adjust=False)
         return hist
     
     def get_actions(self, ticker):

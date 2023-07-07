@@ -1,21 +1,45 @@
 from sqlalchemy import create_engine, Table, MetaData
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError, OperationalError
-from helpers import Logger
+from helper.logger import Logger
+from functools import wraps
+from db.schema import StockData
+from fetchers.data_fetcher import DataFetcher
 
 logger = Logger(__name__).get_logger()
 
-class DatabaseManager:
+def handle_insertion(data_type):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                result = func(*args, **kwargs)
+                logger.info(f"{data_type} saved successfully")
+                return f"{data_type} saved successfully"
+            except Exception as e:
+                logger.error(f"Failure in saving {data_type}: {str(e)}")
+                return f"Failure in saving {data_type}"
+        return wrapper
+    return decorator
+            
+class Singleton(type):
+    _instances = {}
+    
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+class DatabaseManager(metaclass=Singleton):
     def __init__(self, db_url):
         self.engine = create_engine(db_url)
-        self.metadata = MetaData()
         self.Session = sessionmaker(bind=self.engine)
-            
-    def save_data(self, table_name, data):
+        self.fetcher = DataFetcher()
+
+    def save_data(self, data):
         session = self.Session()
         try:
-            table = Table(table_name, self.metadata, autoload=True, autoload_with=self.engine)
-            session.execute(table.insert(), data)
+            session.add_all(data)
             session.commit()
         except IntegrityError as e:
             session.rollback()
@@ -31,4 +55,23 @@ class DatabaseManager:
             raise e
         finally:
             session.close()
+    
+    @handle_insertion('historical data')
+    def save_historical_data(self, ticker, period='max', interval='1d', start=None, end=None):
+        data = self.fetcher.get_historical_data(ticker, period, interval, start, end)
+        data = [
+            StockData(
+                date=str(row.Index),
+                open=row.Open,
+                high=row.High,
+                low=row.Low,
+                close=row.Close,
+                volume=row.Volume,
+                # dividends=row.Dividends,
+                # stock_splits=row.Stock_Splits,
+            )
+            for row in data.itertuples()
+        ]
+        
+        self.save_data(data)
         

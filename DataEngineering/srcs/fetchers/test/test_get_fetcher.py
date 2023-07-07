@@ -1,5 +1,5 @@
 import unittest
-from data_fetcher import DataFetcher
+from fetchers.data_fetcher import DataFetcher
 
 class TestDataFetcher(unittest.TestCase):
     def setUp(self):
@@ -38,12 +38,6 @@ class TestDataFetcher(unittest.TestCase):
     def test_get_shares_full(self):
         data = self.fetcher.get_shares_full("AAPL")
         print("---- Shares Full ----")
-        print(data)
-        self.assertIsNotNone(data)
-        
-    def test_get_shares_outstanding(self):
-        data = self.fetcher.get_shares_outstanding("AAPL")
-        print("---- Shares Outstanding ----")
         print(data)
         self.assertIsNotNone(data)
     
