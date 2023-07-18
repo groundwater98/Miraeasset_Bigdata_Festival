@@ -1,8 +1,10 @@
 from sqlalchemy import create_engine, Table, MetaData
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError, OperationalError
-from helper.logger import Logger
+from sqlalchemy.ext.declarative import declarative_base
+from schema import Base, StockData, StockMetadata
 from functools import wraps
+from helper.logger import Logger
 from db.schema import StockData
 from fetchers.data_fetcher import DataFetcher
 
@@ -35,6 +37,18 @@ class DatabaseManager(metaclass=Singleton):
         self.engine = create_engine(db_url)
         self.Session = sessionmaker(bind=self.engine)
         self.fetcher = DataFetcher()
+        logger.info("Database manager initialized")
+
+    def create_all_table(self):
+        try:
+            metadata = Base.metadata
+            metadata.create_all(self.engine, checkfirst=True)
+            logger.info("Table created successfully")
+            logger.info("If table already exists, no effect.")
+        except OperationalError as e:
+            logger.Fatal("OperationalError occurred while creating tables: %s", str(e))
+        except Exception as e:
+            logger.Fatal("Error occurred while creating tables: %s", str(e))
 
     def save_data(self, data):
         session = self.Session()
@@ -74,4 +88,5 @@ class DatabaseManager(metaclass=Singleton):
         ]
         
         self.save_data(data)
+
         
