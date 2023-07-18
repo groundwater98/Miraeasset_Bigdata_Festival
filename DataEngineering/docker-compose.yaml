@@ -1,16 +1,25 @@
 version: '3.1'
 
 services:
-
   db:
     image: postgres
     restart: always
     environment:
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+        POSTGRES_DB: "postgres"
+        POSTGRES_USER: "postgres"
+        POSTGRES_PASSWORD: "1234"
     volumes:
-      - ./data/db:/var/lib/postgresql/data
+      - /mnt/d/data/db:/var/lib/postgresql/data
     ports:
       - 5432:5432
+    
+  
+  app:
+    image: youngmukde/festa-python:latest
+    volumes:
+      - /mnt/c/Users/admin/miraeasset-festa/DataEngineering/srcs:/app/srcs
+    working_dir: /app/srcs
+    command: tail -f /dev/null
 
 volumes:
   dbdata:
