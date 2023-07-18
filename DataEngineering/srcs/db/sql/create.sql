@@ -1,4 +1,4 @@
-CREATE TABLE stock_data (
+CREATE TABLE IF NOT EXISTS stock_data (
     id SERIAL PRIMARY KEY,
     date TIMESTAMP WITH TIME ZONE,
     open NUMERIC,
@@ -11,7 +11,7 @@ CREATE TABLE stock_data (
     stock_splits NUMERIC
 );
 
-CREATE TABLE stock_metadata (
+CREATE TABLE IF NOT EXISTS stock_metadata (
     symbol VARCHAR(10) PRIMARY KEY,
     currency VARCHAR(10),
     exchange_name VARCHAR(50),
@@ -29,7 +29,7 @@ CREATE TABLE stock_metadata (
     current_trading_period JSONB
 );
 
-CREATE TABLE stock_company (
+CREATE TABLE IF NOT EXISTS stock_company (
     symbol VARCHAR(10) PRIMARY KEY,
     company_name VARCHAR(100),
     long_name VARCHAR(100),
