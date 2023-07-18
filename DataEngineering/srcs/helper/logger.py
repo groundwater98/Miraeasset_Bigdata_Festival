@@ -1,8 +1,13 @@
 import logging
 import sys
+import toml
+
+with open("../config.toml", "r") as f:
+    _data = toml.load(f)
+    data = _data["logging"]
 
 class Logger:
-    def __init__(self, logger_name, save=False, file_name="app.log", level="DEBUG"):
+    def __init__(self, logger_name, save=False, file_name=data['log_file'], level=data['log_level']):
         self.logger = logging.getLogger(logger_name)
         self._set_logger_configuration(save, file_name, level)
         
