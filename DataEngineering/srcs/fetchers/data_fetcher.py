@@ -17,8 +17,8 @@ class DataFetcher:
         stock  = yf.Ticker(ticker)
         if start and end:
             hist = stock.history(period=period, interval=interval, start=start, end=end, auto_adjust=False)
-        hist = stock.history(period=period, interval=interval, auto_adjust=False)
-        print(stock.history_metadata)
+        else:
+            hist = stock.history(period=period, interval=interval, auto_adjust=False)
         return hist
     
     def get_actions(self, ticker):
@@ -32,7 +32,7 @@ class DataFetcher:
         """
         stock  = yf.Ticker(ticker)
         actions = stock.actions
-        print(actions)
+        # print(actions)
         return actions
     
     def get_dividends(self, ticker):
@@ -46,7 +46,7 @@ class DataFetcher:
         """
         stock  = yf.Ticker(ticker)
         dividends = stock.dividends
-        print(dividends)
+        # print(dividends)
         return dividends
     
     # 
@@ -61,7 +61,7 @@ class DataFetcher:
         """
         stock  = yf.Ticker(ticker)
         splits = stock.splits
-        print(splits)
+        # print(splits)
         return splits
 
     def get_capital_gains(self, ticker):
@@ -75,7 +75,7 @@ class DataFetcher:
         """
         stock  = yf.Ticker(ticker)
         capital_gains = stock.capital_gains
-        print(capital_gains)
+        # print(capital_gains)
         return capital_gains
     
     def get_shares_full(self, ticker):
@@ -89,7 +89,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         shares = stock.get_shares_full()
-        print(shares)
+        # print(shares)
         return shares
     
     def get_income_statement(self, ticker):
@@ -103,7 +103,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         income_stmt = stock.income_stmt
-        print(income_stmt)
+        # print(income_stmt)
         return income_stmt
         
     
@@ -118,7 +118,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         income_stmt = stock.quarterly_income_stmt
-        print(income_stmt)
+        # print(income_stmt)
         return income_stmt
         
     
@@ -133,7 +133,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         balance_sheet = stock.balance_sheet
-        print(balance_sheet)
+        # print(balance_sheet)
         return balance_sheet
     
     def get_quarterly_balance_sheet(self, ticker):
@@ -147,7 +147,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         balance_sheet = stock.quarterly_balance_sheet
-        print(balance_sheet)
+        # print(balance_sheet)
         return balance_sheet
     
     def get_cashflow(self, ticker):
@@ -161,7 +161,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         cashflow = stock.cashflow
-        print(cashflow)
+        # print(cashflow)
         return cashflow
     
     def get_quarterly_cashflow(self, ticker):
@@ -175,7 +175,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         cashflow = stock.quarterly_cashflow
-        print(cashflow)
+        # print(cashflow)
         return cashflow
     
     def get_major_holders(self, ticker):
@@ -189,7 +189,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         major_holders = stock.major_holders
-        print(major_holders)
+        # print(major_holders)
         return major_holders
     
     def get_institutional_holders(self, ticker):
@@ -203,7 +203,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         institutional_holders = stock.institutional_holders
-        print(institutional_holders)
+        # print(institutional_holders)
         return institutional_holders
     
     def get_mutualfund_holders(self, ticker):
@@ -217,7 +217,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         mutualfund_holders = stock.mutualfund_holders
-        print(mutualfund_holders)
+        # print(mutualfund_holders)
         return mutualfund_holders
     
     def get_earning_dates(self, ticker, limit):
@@ -232,7 +232,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         earning_dates = stock.get_earnings_dates(limit=limit)
-        print(earning_dates)
+        # print(earning_dates)
         return earning_dates
     
     def get_isin(self, ticker):
@@ -246,7 +246,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         isin = stock.isin
-        print(isin)
+        # print(isin)
         return isin
     
     def get_options(self, ticker):
@@ -260,7 +260,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         options = stock.options
-        print(options)
+        # print(options)
         return options
     
     def get_news(self, ticker):
@@ -274,7 +274,7 @@ class DataFetcher:
         """
         stock = yf.Ticker(ticker)
         news = stock.news
-        print(news)
+        # print(news)
         return news
 
     def get_option_chain(self, ticker, date=None):
@@ -291,5 +291,5 @@ class DataFetcher:
             raise ValueError("date is required")
         stock = yf.Ticker(ticker)
         option_chain = stock.option_chain(date)
-        print(option_chain)
+        # print(option_chain)
         return option_chain

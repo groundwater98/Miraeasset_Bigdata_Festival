@@ -1,3 +1,5 @@
+from db.schema import StockData
+
 class StockManager:
     def __init__(self, fetcher, db_manager):
         self.fetcher = fetcher
