@@ -1,0 +1,12 @@
+api_key = ""
+
+[database]
+db_name = "postgres"
+db_password = "docker"
+db_username = "docker"
+docker_host = "0.0.0.0"
+db_port = 5432
+
+[logging]
+log_level = "DEBUG"
+log_file = "app.log"

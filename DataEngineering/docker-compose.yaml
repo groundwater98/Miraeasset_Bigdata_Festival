@@ -1,19 +1,26 @@
 version: '3.1'
 
 services:
-  db:
+  database:
     image: postgres
     restart: always
     environment:
-        POSTGRES_DB: "postgres"
-        POSTGRES_USER: "postgres"
-        POSTGRES_PASSWORD: "1234"
+        POSTGRES_DB: "database"
+        POSTGRES_USER: "docker"
+        POSTGRES_PASSWORD: "docker"
     volumes:
       - /mnt/d/data/db:/var/lib/postgresql/data
     ports:
       - 5432:5432
-    
   
+  adminer:
+    image: adminer
+    restart: always
+    depends_on:
+      - database
+    ports:
+      - 8080
+    
   app:
     image: youngmukde/festa-python:latest
     volumes:
