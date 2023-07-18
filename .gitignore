@@ -11,6 +11,8 @@
 # Icon must end with two \r
 Icon
 
+# VirtualEnv
+DataEngineering/de
 
 # Thumbnails
 ._*
