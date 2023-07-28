@@ -70,7 +70,6 @@ class NaverAPIHandler(APIHandler):
                     'link': link,
                     'description': description,
                 }
-                print(item_dict)
                 items.append(item_dict)
             return json.dumps(items, indent=4, ensure_ascii=False)
         
