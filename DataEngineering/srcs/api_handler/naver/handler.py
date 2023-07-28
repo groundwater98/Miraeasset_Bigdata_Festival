@@ -78,8 +78,3 @@ class NaverAPIHandler(APIHandler):
             error_message = response.json().get('errorMessage')
             error_code = response.json().get('errorCode')
             logger.fatal("Error: %s", self.error_codes.get(error_code, 'Unknown error. Message: %s' % error_message))
-        
-        
-         
-        
-    

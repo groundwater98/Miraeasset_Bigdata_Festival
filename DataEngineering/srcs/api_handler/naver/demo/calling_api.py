@@ -39,4 +39,3 @@ else:
     error_message = response.json().get('errorMessage')
     error_code = response.json().get('errorCode')
     logger.fatal("Error: %s", error_codes.get(error_code, 'Unknown error. Message: %s' % error_message))
-

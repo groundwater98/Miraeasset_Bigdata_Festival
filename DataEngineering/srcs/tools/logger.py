@@ -1,8 +1,12 @@
 import logging
+import os
 import sys
 import toml
 
-with open("../config.toml", "r") as f:
+config_path = os.getenv('TOOLS_CONFIG_PATH', '..')
+print(config_path)
+
+with open(config_path, "r") as f:
     _data = toml.load(f)
     data = _data["logging"]
 
