@@ -1,6 +1,11 @@
 # Created by https://www.toptal.com/developers/gitignore/api/macos,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,python
 
+### virtual env & DB ### 
+DataEngineering/de/
+DataEngineering/srcs/de.egg-info
+
+
 ### macOS ###
 # General
 .DS_Store
