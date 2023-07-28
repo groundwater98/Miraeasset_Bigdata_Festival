@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.declarative import declarative_base
 from schema import Base, StockData, StockMetadata
 from functools import wraps
-from helper.logger import Logger
+from tools.logger import Logger
 from db.schema import StockData
 from fetchers.data_fetcher import DataFetcher
 

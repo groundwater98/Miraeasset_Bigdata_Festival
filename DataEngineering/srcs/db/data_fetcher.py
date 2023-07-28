@@ -1,13 +1,14 @@
 import os
 import toml
-from helper.logger import Logger
+from tools.logger import Logger
 from db.database_manager import DatabaseManager
 
+config_path = os.getenv('DB_CONFIG_PATH')
 logger = Logger(__name__).get_logger()
 
 def initialize_database():
     try:
-        with open("../config.toml", "r") as f:
+        with open(config_path, "r") as f:
             data = toml.load(f)
         db_name = data["database"]["db_name"]
         db_password = data["database"]["db_password"]
