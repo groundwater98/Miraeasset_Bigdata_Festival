@@ -1,4 +1,5 @@
 import requests, json, html
+from datetime import datetime
 import xml.etree.ElementTree as ET
 from api_handler.handler import APIHandler
 from bs4 import BeautifulSoup
@@ -8,9 +9,10 @@ logger = logger.Logger(__name__).get_logger()
 
 class NaverAPIHandler(APIHandler):
     def __init__(self):
-        self.config = {
+        self.configs = {
             "url": "",
             "query": "",
+            "display": "",
             "start": "",
             "sort": "",
         }
@@ -23,15 +25,15 @@ class NaverAPIHandler(APIHandler):
         self.error_codes = None
     
     
-    def init_config(self, config):
-        if config["url"] == "" or config["query"] == "":
-            logger.fatal("Error: %s", "Please set the config for the Naver API.")
+    def init_configs(self, configs):
+        if configs["url"] == "":
+            logger.fatal("Error: %s", "Please set the configs for the Naver API.")
             
-        self.config = {
-            "url": config["url"],
-            "query": config["query"],
-            "start": config["start"],
-            "sort": config["sort"],
+        self.configs = {
+            "url": configs["url"],
+            "display": configs["display"],
+            "start": configs["start"],
+            "sort": configs["sort"],
         }
     
     
@@ -46,35 +48,73 @@ class NaverAPIHandler(APIHandler):
         self.error_codes = error_codes
         
     
-    def get_response(self):
+    def get_response(self, query: str = None):
+        """
+        return: json string
+        title: str (title of the news)
+        link: str (url of news)
+        description: str (description of the news)
+        pubdate: isoformat (publication date of the news)
+        """        
         logger.debug("headers: %s", self.headers)
+        logger.debug("configs: %s", self.configs)
         response = requests.get(
-            self.config['url'], 
+            self.configs['url'], 
             params={
-                "query": self.config['query'], 
-                "start": self.config['start'], 
-                "sort": self.config['sort']
+                "query": query,
+                "display": self.configs['display'],
+                "start": self.configs['start'], 
+                "sort": self.configs['sort']
             }, 
             headers=self.headers,
             timeout=30
         )        
-        
         items = []
         if response.status_code == 200:
-            root = ET.fromstring(response.text)
+            root = ET.fromstring(response.content)
             for item in root.iter('item'):
-                title = BeautifulSoup(html.unescape(item.find('title').text), 'html.parser').get_text()
+                
+                title = None
+                link = None
+                description = None
+                date_object = None
+                
+                if item is None:
+                    continue
+                # item_xml = ET.tostring(item, encoding='unicode')
+                
+                title_element = item.find('title')
+                if title_element is not None:
+                    title = BeautifulSoup(html.unescape(item.find('title').text), 'html.parser').get_text()
+                
                 link = item.find('link').text
-                description = BeautifulSoup(item.find('description').text, 'html.parser').get_text()
+                
+                try:
+                    description_element = item.find('description')
+                
+                    if description_element is not None:
+                        description = BeautifulSoup(item.find('description').text, 'html.parser').get_text()
+                except TypeError:
+                    description = ""
+
+                pubdate_element = item.find('pubDate')
+                if pubdate_element is not None:
+                    pubdate = pubdate_element.text
+                    date_format = "%a, %d %b %Y %H:%M:%S %z"
+                    date_object = datetime.strptime(pubdate, date_format).isoformat()
+                    
                 item_dict = {
-                    "title": title,
-                    'link': link,
-                    'description': description,
+                    "query": query,
+                    "title": title if title is not None else '',
+                    'link': link if link is not None else '',
+                    'description': description if description is not None else '',
+                    'pubdate': date_object if date_object is not None else '',
                 }
                 items.append(item_dict)
             return json.dumps(items, indent=4, ensure_ascii=False)
         else:
-            error_message = response.json().get('errorMessage')
-            error_code = response.json().get('errorCode')
-            logger.fatal("Error: %s", self.error_codes.get(error_code, 'Unknown error. Message: %s' % error_message))
+            root = ET.fromstring(response.text)
+            error_code = root.find('errorCode').text
+            error_message = root.find('errorMessage').text
+            logger.fatal("Error: %s", self.error_codes.get(error_code, 'Message: %s' % error_message))
             return None

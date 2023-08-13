@@ -1,6 +1,6 @@
 import os
 import toml
-from tools import logger
+from tools import logger, csv
 from api_handler.naver.handler import NaverAPIHandler
 
 logger = logger.Logger(__name__).get_logger()
@@ -15,18 +15,25 @@ def main():
         'X-Naver-Client-Id': os.getenv('NAVER_CLIENT_ID'),
         'X-Naver-Client-Secret': os.getenv('NAVER_CLIENT_SECRET'),
     }
+    queries = config["search"]["query"]
     logger.debug("headers: %s", headers)
-    naver_api_handler = NaverAPIHandler()
-    naver_api_handler.init_config({
-        "url": config["url"]["news"],
-        "query": config["search"]["query"],
-        "start": config["search"]["start"],
-        "sort": config["search"]["sort"],
-    })
-    naver_api_handler.init_credential(headers)
-    naver_api_handler.init_error_codes(config["news_error_code"])
-    response = naver_api_handler.get_response()
-    print(response)
-
+    for query in queries:
+        logger.debug("query: %s", query)
+        naver_api_handler = NaverAPIHandler()
+        naver_api_handler.init_configs({
+            "url": config["url"]["news"],
+            "start": config["search"]["start"],
+            "display": config["search"]["display"],
+            "sort": config["search"]["sort"],
+        })
+        naver_api_handler.init_credential(headers)
+        naver_api_handler.init_error_codes(config["error_messages"])
+        response = naver_api_handler.get_response(query)
+        # logger.debug("response: %s", response)
+        output_file_dir = config["output"]["path"]
+        output = output_file_dir + f"{query}.csv"
+        csv.json_to_csv(response, output)
+        
+        
 if __name__ == "__main__":
     main()

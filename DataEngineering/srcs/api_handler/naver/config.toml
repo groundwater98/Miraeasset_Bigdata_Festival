@@ -2,12 +2,12 @@
 news = "https://openapi.naver.com/v1/search/news.xml"
 
 [search]
-query = ["삼성전자", "LG에너지솔루션", "SK하이닉스", "삼성바이오로직스", "POSCO홀딩스", "LG화학", "삼성SDI", "현대차", "포스코퓨처엠", "삼성전자우"]
-display = 10
+query = ["삼성전자", "LG에너지솔루션", "SK하이닉스", "삼성바이오로직스", "POSCO홀딩스", "LG화학", "삼성SDI", "현대차", "포스코퓨처엠", "삼성전자우", "네이버", "카카오", "에코프로비엠", "에코프로", "셀트리온헬스케어", "엘앤에프", "JYP", "HLB", "펄어비스", "셀트리온제약", "포스코DX", "주담대", "금리", "코스피", "코스닥"]
+display = 100
 start = 1
-sort = "sim"
+sort = "date"
 
-[news_error_code]
+[error_messages]
 SE01 = "Incorrect query request. Please check the API request URL protocol, parameters, etc."
 SE02 = "Invalid display value. Please make sure display parameter value is within the allowed range (1~100)."
 SE03 = "Invalid start value. Please make sure start parameter value is within the allowed range (1~1000)."
@@ -15,3 +15,6 @@ SE04 = "Invalid sort value. Please check if there is a typo in the sort paramete
 SE06 = "Malformed encoding. Please ensure the search term is in UTF-8 encoding."
 SE05 = "Invalid search API. Please check if there is a typo in the API request URL."
 SE99 = "System Error. Please report the error to the 'Developer Forum'."
+
+[output]
+path = "./data/csvs/"
