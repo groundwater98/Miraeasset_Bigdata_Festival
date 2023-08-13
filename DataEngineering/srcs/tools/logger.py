@@ -11,12 +11,12 @@ with open(config_path, "r") as f:
     data = _data["logging"]
 
 class Logger:
-    def __init__(self, logger_name, save=False, file_name=data['log_file'], level=data['log_level']):
+    def __init__(self, logger_name, save=True, file_name=data['log_file'], level=data['log_level']):
         self.logger = logging.getLogger(logger_name)
         self._set_logger_configuration(save, file_name, level)
         
     def _set_logger_configuration(self, save, file_name, level):
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(filename)s - %(levelname)s - %(message)s')
         level = getattr(logging, level.upper())
         
         stream_handler = logging.StreamHandler(sys.stdout)
