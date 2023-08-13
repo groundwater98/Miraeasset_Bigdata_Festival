@@ -11,9 +11,9 @@ query = "aapl"
 
 params = {
     "query": query,
-    "display": 1,
-    "start": 1,
-    "sort": "sim"
+    "display": 10,
+    "start": 10,
+    "sort": "date"
 }
 
 headers = {

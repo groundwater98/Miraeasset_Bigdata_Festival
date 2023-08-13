@@ -44,9 +44,10 @@ class NaverAPIHandler(APIHandler):
     
     def init_error_codes(self, error_codes):
         self.error_codes = error_codes
-    
+        
     
     def get_response(self):
+        logger.debug("headers: %s", self.headers)
         response = requests.get(
             self.config['url'], 
             params={
@@ -72,8 +73,8 @@ class NaverAPIHandler(APIHandler):
                 }
                 items.append(item_dict)
             return json.dumps(items, indent=4, ensure_ascii=False)
-        
         else:
             error_message = response.json().get('errorMessage')
             error_code = response.json().get('errorCode')
             logger.fatal("Error: %s", self.error_codes.get(error_code, 'Unknown error. Message: %s' % error_message))
+            return None
