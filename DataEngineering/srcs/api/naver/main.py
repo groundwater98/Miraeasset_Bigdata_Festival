@@ -1,7 +1,7 @@
 import os
 import toml
 from tools import logger, csv
-from api_handler.naver.handler import NaverAPIHandler
+from api.naver.handler import NaverAPIHandler
 
 logger = logger.Logger(__name__).get_logger()
 
@@ -29,11 +29,10 @@ def main():
         naver_api_handler.init_credential(headers)
         naver_api_handler.init_error_codes(config["error_messages"])
         response = naver_api_handler.get_response(query)
-        # logger.debug("response: %s", response)
+        logger.debug("response: %s", response)
         output_file_dir = config["output"]["path"]
         output = output_file_dir + f"{query}.csv"
         csv.json_to_csv(response, output)
-        
         
 if __name__ == "__main__":
     main()

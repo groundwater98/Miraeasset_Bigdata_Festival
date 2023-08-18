@@ -1,8 +1,8 @@
 import requests, json, html
 from datetime import datetime
 import xml.etree.ElementTree as ET
-from api_handler.handler import APIHandler
 from bs4 import BeautifulSoup
+from api.handler import APIHandler
 from tools import logger
 
 logger = logger.Logger(__name__).get_logger()
