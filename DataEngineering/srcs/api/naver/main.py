@@ -1,7 +1,7 @@
 import os
 import toml
 from tools import logger, csv
-from api_handler.naver.handler import NaverAPIHandler
+from api.naver.handler import NaverAPIHandler
 
 logger = logger.Logger(__name__).get_logger()
 

@@ -5,10 +5,17 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
-COPY requirements.txt .
-
+COPY api/naver/requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-COPY . .
+COPY ./api ./api
+COPY ./tools ./tools
+COPY setup.py .
+COPY setup.sh .
+RUN chmod +x ./setup.sh
 
-CMD [ "python", "./main.py" ]
+ENTRYPOINT ["./setup.sh"]
+
+# Command to run your application
+# CMD [ "ls", "/app" ]
+CMD [ "python", "api/naver/main" ]

@@ -28,6 +28,6 @@ jobs:
       - name: Build and push NAVER image
         uses: docker/build-push-action@v2
         with:
-          context: naver
+          context: DataEngineering/srcs
           file: DataEngineering/srcs/api/naver/Dockerfile
           tags: youngmki/naver_api:${{ steps.extract_tag.outputs.tag }}
