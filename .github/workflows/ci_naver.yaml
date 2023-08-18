@@ -21,13 +21,15 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Set tag name
-        id: tag_name
+      - name: Extract branch or tag name
+        id: extract_ref
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+            echo "TYPE=tag" >> $GITHUB_ENV
+            echo "REF_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           else
-            echo "TAG=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+            echo "TYPE=branch" >> $GITHUB_ENV
+            echo "REF_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
           fi
 
       - name: Build and push NAVER image
@@ -35,4 +37,4 @@ jobs:
         with:
           context: DataEngineering/srcs
           file: DataEngineering/srcs/api/naver/Dockerfile
-          tags: youngmki/naver_api:${{ env.TAG }}
+          tags: youngmki/naver_api:${{ env.REF_NAME }}
