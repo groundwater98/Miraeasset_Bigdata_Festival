@@ -55,5 +55,6 @@ jobs:
         with:
           context: DataEngineering/srcs
           file: DataEngineering/srcs/api/naver/Dockerfile
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
