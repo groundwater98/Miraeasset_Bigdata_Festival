@@ -9,6 +9,9 @@ logger = logger.Logger(__name__).get_logger()
 
 class NaverAPIHandler(APIHandler):
     def __init__(self):
+        
+        super().__init__()
+        
         self.configs = {
             "url": "",
             "query": "",
@@ -27,7 +30,7 @@ class NaverAPIHandler(APIHandler):
     
     def init_configs(self, configs):
         if configs["url"] == "":
-            logger.fatal("Error: %s", "Please set the configs for the Naver API.")
+            logger.fatal("Error: %s", "Please set the configs for the Naver API url.")
             
         self.configs = {
             "url": configs["url"],
@@ -37,11 +40,11 @@ class NaverAPIHandler(APIHandler):
         }
     
     
-    def init_credential(self, headers):
-        if headers["X-Naver-Client-Id"] == "" or headers["X-Naver-Client-Secret"] == "":
+    def init_credential(self, credentials):
+        if credentials["X-Naver-Client-Id"] == "" or credentials["X-Naver-Client-Secret"] == "":
             logger.fatal("Error: %s", "Please set the headers for the Naver API.")            
-        self.headers['X-Naver-Client-Id'] = headers["X-Naver-Client-Id"]
-        self.headers['X-Naver-Client-Secret'] = headers["X-Naver-Client-Secret"]
+        self.headers['X-Naver-Client-Id'] = credentials["X-Naver-Client-Id"]
+        self.headers['X-Naver-Client-Secret'] = credentials["X-Naver-Client-Secret"]
     
     
     def init_error_codes(self, error_codes):
