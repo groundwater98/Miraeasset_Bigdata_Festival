@@ -18,4 +18,4 @@ ENTRYPOINT ["./setup.sh"]
 
 # Command to run your application
 # CMD [ "ls", "/app" ]
-CMD [ "python", "api/naver/main" ]
+CMD [ "python", "api/naver/main.py" ]
