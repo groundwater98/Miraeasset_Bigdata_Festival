@@ -3,6 +3,18 @@
 
 # Dataset
 ML/data
+ML/finetune_dataset
+
+# Model Experiments
+ML/models/lg_chem.png
+ML/models/prediction.jpg
+ML/datda_generation.py
+ML/olympics-2-create-qa.ipynb
+ML/olympics-3-train-qa.ipynb
+ML/read_jsonl.py
+ML/models/chatGPT_test.py
+ML/0.4.1
+ML/knn_model.pth
 
 ### virtual env & DB ### 
 DataEngineering/de/
