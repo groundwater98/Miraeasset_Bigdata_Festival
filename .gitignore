@@ -15,6 +15,7 @@ ML/read_jsonl.py
 ML/models/chatGPT_test.py
 ML/0.4.1
 ML/knn_model.pth
+ML/models/__pycache__
 
 ### virtual env & DB ### 
 DataEngineering/de/
