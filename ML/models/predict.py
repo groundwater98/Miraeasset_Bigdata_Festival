@@ -18,7 +18,7 @@ def save_stock_plot(rawdata, stock_name="LG_chme"):
     try:
         plt.figure(figsize=(20,5))
         plt.plot(range(len(rawdata)), rawdata['Close'])
-        plt.savefig('/root/workspace/QA/models/lg_chem.png')
+        plt.savefig(f'/root/workspace/miraeasset-festa/ML/models/{stock_name}.jpg')
         print("Save Success!!")
     except Exception as e:
         print(f"Save Stock plot Failed!!: {e}")
@@ -128,15 +128,16 @@ def evaluate(data_train, device, model):
     return predictions.detach().cpu().numpy()
 
 
-def predict(stock):
+def predict(stock, period):
     print(f"Notice: Since it is in the initial stage of the service, \
           we predict only the stock price of LG Chem, not the stock price \
           of the designated company.\n\n")
+    # 이 코드대신 지수형이 spl로 얻어온 data가 rawdata가 되어야 함.
     print(f"Loading Stock Data ...")
-    rawdata = pd.read_csv("/root/workspace/QA/data/test_data/lg_chem_closing_prices.csv")
+    rawdata = pd.read_csv("/root/workspace/miraeasset-festa/ML/data/lg_chem_closing_prices.csv")
 
     print(f"Saving Stock data as .png ...")
-    save_stock_plot(rawdata)
+    save_stock_plot(rawdata, stock)
 
     print(f"Preprocessing Data with MinMaxScaling ...")
     min_max_scaler = MinMaxScaler()
@@ -157,7 +158,7 @@ def predict(stock):
     #test_loader = DataLoader(test_dataset)
 
     print(f"Model Constructing ...")
-    device = torch.device("cuda")
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     lr = 1e-4
     model = TFModel(30*2, 30, 512, 8, 4, 0.1).to(device)
     criterion = nn.MSELoss()
