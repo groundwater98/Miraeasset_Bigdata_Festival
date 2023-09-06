@@ -21,7 +21,7 @@ def labeling_module():
     with open(path, 'r') as file:
         news = file.read()
 
-    My_OpenAI_key = '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'
+    My_OpenAI_key = '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'
     openai.api_key = My_OpenAI_key
 
     print(f"Translating the news data to English ...")
