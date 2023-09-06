@@ -1,3 +1,4 @@
+import os
 import torch
 import math
 import torch.nn as nn
@@ -7,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from model import Encoder, Decoder, Attention, Seq2Seq
+from Seq2seqLSTM import Encoder, Decoder, Attention, Seq2Seq
 import matplotlib.pyplot as plt
 
 
@@ -131,6 +132,7 @@ attn = Attention(HID_DIM)
 dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, HID_DIM, N_LAYERS, DEC_DROPOUT, attn)
 model = Seq2Seq(enc, dec, device).to(device)
 
+#optimizer = optim.SGD(model.parameters(),lr=0.01)
 optimizer = optim.Adam(model.parameters())
 criterion = nn.CrossEntropyLoss(ignore_index=train_dataset.pad_idx) # loss function
 
@@ -158,7 +160,7 @@ for epoch in range(N_EPOCHS):
 
 test_loss = test(model, test_loader, criterion)
 print(f'Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f}')
-
+'''
  # Plotting the losses
 plt.figure(figsize=(10, 6))
 plt.plot(train_losses, label='Training Loss')
@@ -169,9 +171,8 @@ plt.ylabel('Loss')
 plt.title('Training & Validation Loss over Epochs')
 plt.legend()
 plt.show()
-
+'''
 torch.save(model.state_dict(), 'seq2seq-model.pt')
-
 '''
 def main_training():
     # Load and process the data
@@ -199,17 +200,29 @@ def main_training():
     dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, HID_DIM, N_LAYERS, DEC_DROPOUT, attn)
     model = Seq2Seq(enc, dec, device).to(device)
 
+   #optimizer = optim.SGD(model.parameters(),lr=0.01)
     optimizer = optim.Adam(model.parameters())
+
     criterion = nn.CrossEntropyLoss(ignore_index=train_dataset.pad_idx)
 
     N_EPOCHS = 10
     CLIP = 1
+
+     # matplotlib으로 시각화를 하기 위한 코드
+    train_losses = []
+    valid_losses = []
+
 
     # PPL->Perplexity: 낮을 수록 좋다.
 
     for epoch in range(N_EPOCHS):
         train_loss = train(model, train_loader, optimizer, criterion, CLIP)
         valid_loss = evaluate(model, val_loader, criterion)
+
+        # Save the losses for plotting
+        train_losses.append(train_loss)
+        valid_losses.append(valid_loss)
+        
         print(f'Epoch: {epoch + 1:02}')
         print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
         print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
@@ -218,8 +231,23 @@ def main_training():
     test_loss = test(model, test_loader, criterion)
     print(f'Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f}')
 
-    torch.save(model.state_dict(), 'seq2seq-model.pt')
+    # Plotting the losses
+    plt.figure(figsize=(10, 6))
+    plt.plot(train_losses, label='Training Loss')
+    plt.plot(valid_losses, label='Validation Loss')
+    plt.axhline(y=test_loss, color='r', linestyle='--', label='Test Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training & Validation Loss over Epochs')
+    plt.legend()
+    plt.show()
 
+
+    torch.save(model.state_dict(), 'seq2seq-model.pt')
+    with open('weights_from_training.txt', 'w') as f:
+        for key, value in model.state_dict().items():
+            f.write(str(key) + '\n')
+            f.write(str(value.cpu().numpy()) + '\n')
 if __name__ == "__main__":
     main_training()
 '''
