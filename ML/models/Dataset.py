@@ -1,34 +1,56 @@
 import random
 import csv
+import pandas as pd
 
 # 패턴 예제
 sentence_patterns = [
     "{}의 최신 소식을 알려줘",
-    "{}의 지난 {}일 동안의 뉴스를 알려줘",
-    "{} 뉴스의 최근 제목 {}개를 알려줘",
+    "{} 관련 최근 뉴스를 알려줘",
     "{}의 최신 뉴스 링크를 보여줘",
+    "{}의 최근 소식을 알려줘",
+    
+    "{}의 지난 {}일 동안의 뉴스를 요약해줘",
+    "{}의 지난 {}일 간의 뉴스를 요약해줘",
+    "{}의 최근 {}일 간의 뉴스를 요약해줘",
+
+    "{}의 최신 뉴스 {}개를 요약해줘",
+    "{} 뉴스의 최근 제목 {}개를 알려줘",
+
     "{}의 {}일 전 뉴스 제목을 알려줘",
-    "{}의 {}월 {}일자 뉴스를 보여줘",
+    
+    "{}의 {}월 {}일자 뉴스를 알려줘",
     "{}에 대한 {}월 {}일의 뉴스 제목을 알려줘",
     "{} {}월 {}일의 뉴스 링크를 알려줘",
     "{}에서 {}월 {}일에 발표한 뉴스가 뭐야?",
     "{}의 {}월 {}일에 대한 뉴스 내용을 보여줘",
+    "{}에서 {}월 {}일에 발표한 뉴스가 뭐야?",
 ]
 
 sql_patterns = [
     "SELECT title, link, description, pubdate FROM {} ORDER BY pubdate DESC LIMIT 1",
-    "SELECT title, link, description, pubdate FROM {} WHERE pubdate >= NOW() - INTERVAL {} DAY ORDER BY pubdate DESC",
-    "SELECT title FROM {} ORDER BY pubdate DESC LIMIT {}",
-    "SELECT link FROM {} ORDER BY pubdate DESC LIMIT 1",
-    "SELECT title FROM {} WHERE pubdate = NOW() - INTERVAL {} DAY",
+    "SELECT title, link, description, pubdate FROM {} ORDER BY pubdate DESC LIMIT 1",
+    "SELECT title, link, description, pubdate FROM {} ORDER BY pubdate DESC LIMIT 1",
+    "SELECT title, link, description, pubdate FROM {} ORDER BY pubdate DESC LIMIT 1",
+
+    "SELECT title, link ,description FROM {} ORDER BY pubdate DESC LIMIT {}",
+    "SELECT title, link ,description FROM {} ORDER BY pubdate DESC LIMIT {}",
+    "SELECT title, link ,description FROM {} ORDER BY pubdate DESC LIMIT {}",
+
+
+    "SELECT title, description FROM {} ORDER BY pubdate DESC LIMIT {}",
+    "SELECT title, description FROM {} ORDER BY pubdate DESC LIMIT {}",
+
+    "SELECT title, description FROM {} WHERE pubdate = NOW() - INTERVAL {} DAY",
+
     "SELECT title, link, description FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
-    "SELECT title FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
-    "SELECT link FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
-    "SELECT title FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
-    "SELECT description FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
+    "SELECT title, link, description FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
+    "SELECT title, link, description FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
+    "SELECT title, link, description FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
+    "SELECT title, link, description FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
+    "SELECT title, link, description FROM {} WHERE MONTH(pubdate) = {} AND DAY(pubdate) = {}",
 ]
 
-companies = ["POSCO홀딩스", "삼성전자", "애플", "네이버", "카카오"]
+companies = ["HLB", "JYP", "LG에너지솔루션", "SK하이닉스", "삼성SDI", "삼성바이오로직스", "삼성전자우", "셀트리온제약", "셀트리온헬스케어", "에코프로", "에코프로비엠", "엘앤에프","POSCO홀딩스", "펄어비스", "포스코DX", "포스코퓨처엠", "현대차", "삼성전자", "애플", "네이버", "카카오"]
 
 def generate_sql_sentences():
     sentences = []
@@ -65,6 +87,7 @@ for i in range(5):
     print(f"SQL: {queries[i]}")
     print('-' * 50)
 # 데이터를 섞는다.
+
 combined = list(zip(sentences, queries))
 random.shuffle(combined)
 
@@ -79,21 +102,22 @@ test_data = combined[train_size+val_size:]
 # CSV 파일로 저장
 
 # train
-with open('train.csv', 'w', newline='', encoding='utf-8') as f:
+with open('/mnt/c/Users/starp/future_asset/Seq2seqLSTM_1/train.csv', 'w', newline='', encoding='utf-8') as f:
     writer = csv.writer(f)
     writer.writerow(["source", "target"])  # header
     writer.writerows(train_data)
 
 # val
-with open('val.csv', 'w', newline='', encoding='utf-8') as f:
+with open('/mnt/c/Users/starp/future_asset/Seq2seqLSTM_1/val.csv', 'w', newline='', encoding='utf-8') as f:
     writer = csv.writer(f)
     writer.writerow(["source", "target"])  # header
     writer.writerows(val_data)
 
 # test
-with open('test.csv', 'w', newline='', encoding='utf-8') as f:
+with open('/mnt/c/Users/starp/future_asset/Seq2seqLSTM_1/test.csv', 'w', newline='', encoding='utf-8') as f:
     writer = csv.writer(f)
     writer.writerow(["source", "target"])  # header
     writer.writerows(test_data)
 
 print("Dataset is ready")
+
