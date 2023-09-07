@@ -1,4 +1,7 @@
-from models import chatGPT, predict, recommend, Seq2seqLSTM
+from Summary import chatGPT
+from Recommendation import recommend
+from Prediction import predict
+from Seq2seq import Seq2seqLSTM
 from typing import Tuple
 import openai
 import pdb
@@ -47,15 +50,7 @@ def get_menu() -> Tuple[str, str, bool]:
         answer = answer.split(":")[1].strip() # 고객이 원하는 서비스
     else:
         # 제대로 된 입력 안 한 경우
-        role = """Your role is to know well what kind of service the other person wants from what they say. 
-        The service must be one of Information Summary, Stock Price Prediction, or Stock Recommendation.
-        If the service is not one of these, answer in the second format. If yes, answer in the first format.
-
-        first form
-        service:
-
-        second form
-        I'm not sure about that part."""
+        role = """You are very humorous and good at telling jokes. Answer questions you find difficult to answer with a joke."""
 
         answer = openai.ChatCompletion.create(
             model="gpt-4",
@@ -64,6 +59,7 @@ def get_menu() -> Tuple[str, str, bool]:
                     {"role": "user", "content": question},
                 ]
         )
+        answer = answer.choices[0]['message']['content']
         humor = True
     print(answer)
     
@@ -94,7 +90,7 @@ def kakao():
                 )
 
                 answer = answer.choices[0]['message']['content']
-                pdb.set_trace()
+                #pdb.set_trace()
                 answer = answer.split("\n")
                 company = answer[0].split(":")[1].strip()
                 period = answer[1].split(":")[1].strip()
@@ -102,7 +98,7 @@ def kakao():
 
                 Seq2seqLSTM.get_sql(question)
                 chatGPT.labeling_module() 
-            elif service == 'Stock price prediction':
+            elif service == 'Stock Price Prediction':
                 role = """You will receive a statement asking for a stock price prediction, 
                 and your role is specialized in finding out which stock you want to predict. 
                 Please answer in the first format below. If the forecast period and stock are not specified, 
@@ -126,15 +122,16 @@ def kakao():
                 answer = answer.choices[0]['message']['content']
                 if answer.find("First answer format") == -1:
                     # 첫번째 대답 형식 아닌 경우: 예측 종목도 없고, 기간도 없는 경우
-                    pdb.set_trace()
+                    #pdb.set_trace()
                     answer = answer.split("\n")
                     stock = answer[1].split(":")[0]
                     period = int(answer[1].split(":")[1].split()[0])
+                    answer = f"I want to know the price of {stock} stock for {period} days."
                 else:
                     # 두번째 대답 형식 아닌 경우: 예측, 기간 특정된 경우
                     pass
                 predict.predict(stock, period)
-            elif service == 'Stock recommendation':
+            elif service == 'Stock Recommendation':
                 user_inform = "우리 서비스 이용중인 고객의 정보를 불러와야 함."
                 recommend.recommend(user_inform)
             else:
