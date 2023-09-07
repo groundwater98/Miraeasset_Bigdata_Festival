@@ -7,7 +7,7 @@ data
 
 # Model Experiments
 ML/Test
-knn/model.pth
+ML/knn/model.pth
 
 ### virtual env & DB ### 
 DataEngineering/de/

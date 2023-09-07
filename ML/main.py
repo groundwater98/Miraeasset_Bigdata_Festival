@@ -61,9 +61,12 @@ def get_menu() -> Tuple[str, str, bool]:
         )
         answer = answer.choices[0]['message']['content']
         humor = True
-    print(answer)
     
     #pdb.set_trace()
+    if not humor:
+        print(f"You want the service, \"{answer}\" Right? I will give you the answer. Please wait for seconds...\n")
+    else:
+        print(answer)
     return answer, question, humor
 
 
@@ -96,8 +99,10 @@ def kakao():
                 period = answer[1].split(":")[1].strip()
                 question = f"{company}의 {period}전 뉴스를 알고싶어."
 
-                Seq2seqLSTM.get_sql(question)
-                chatGPT.labeling_module() 
+                # 실제로 sql로 db접근은 미구현 했기때문에
+                # news는 None 객체
+                news = Seq2seqLSTM.get_sql(question)
+                answer = chatGPT.labeling_module(news) 
             elif service == 'Stock Price Prediction':
                 role = """You will receive a statement asking for a stock price prediction, 
                 and your role is specialized in finding out which stock you want to predict. 
@@ -130,12 +135,17 @@ def kakao():
                 else:
                     # 두번째 대답 형식 아닌 경우: 예측, 기간 특정된 경우
                     pass
-                predict.predict(stock, period)
+                answer = predict.predict(stock, period)
             elif service == 'Stock Recommendation':
                 user_inform = "우리 서비스 이용중인 고객의 정보를 불러와야 함."
-                recommend.recommend(user_inform)
+                answer = recommend.recommend(user_inform)
             else:
                 print(f"\n\nPlease write the correct service!!")
+            refined_answer = chatGPT.Refine_module(answer)
+            kor2eng = chatGPT.Kor2Eng(refined_answer)
+            print("="*30)
+            print(f"Here's our final answer:")
+            print(kor2eng)
 
 if __name__ == '__main__':
     kakao()

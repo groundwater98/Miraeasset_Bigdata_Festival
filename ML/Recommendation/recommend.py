@@ -1,3 +1,6 @@
+import os 
+import pdb
+
 import pandas as pd
 import numpy as np
 
@@ -5,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-
+base_path = os.path.abspath(__file__).split('/')
 
 # k-Nearest Neighbors class
 class KNN:
@@ -40,45 +43,56 @@ class KNN:
     
 
 def recommend(user_inform):
-    print("Loading CustomerData  ...")
-    data = pd.read_csv("/root/workspace/miraeasset-festa/ML/data/cs_mkt_dataset/cs_data.csv")
+    global base_path
+    model_path = "/".join(base_path[:-2]+["Recommendation", "knn_model.pth"])
+    path = "/".join(base_path[:-3]+["data","cs_mkt_dataset","cs_data.csv"])
 
-    print("Processing Nan value  ...")
-    data = data.fillna(method='ffill')
-    data = data.fillna(method="bfill")
-    data.isnull().sum()
-
-    # column data type 변경
-    # 우선은 M1만으로 추천시스템 구축
-    print("Constructing Data  ...")
-    #print(f'{data[["CASH_AST_M1","DMST_AST_EVAL_M1","DMST_AST_PCHS_M1"]].values.dtype}')
-    #print(f'{data[["DMST_AST1_ITM_M1"]].values.dtype}')
-    data.loc[data["DMST_AST1_ITM_M1"]=="*"] = 0
-    data[["DMST_AST1_ITM_M1"]] = data[["DMST_AST1_ITM_M1"]].astype(dtype='float64')
-    print(f'{data[["DMST_AST1_ITM_M1"]].values.dtype}')
-    dm_trainX = torch.tensor(data[["CASH_AST_M1","DMST_AST_EVAL_M1","DMST_AST_PCHS_M1"]].values)
-    dm_trainY = torch.tensor(data[["DMST_AST1_ITM_M1"]].values)
-
-    print("Loading Stock Code Information ...")
-    code_inform = pd.read_csv("/root/workspace/miraeasset-festa/ML/data/cs_mkt_dataset/code.csv", encoding='cp949')
-
-    print("Loading Customer data ...")
-    X_test = torch.tensor([[10000000.0,23000000.0,49000000.0],[1900000.0,160000000.0, 200000000.0]]).float()
-
-
-    print("Constructing k-NN classifier ...")
     # Create k-NN classifier
+    print("Constructing k-NN classifier ...")
     knn = KNN(k=5)
-    knn.fit(dm_trainX.float(), dm_trainY.float(), code_inform)
+      
+    if not os.path.exists(model_path):
+        print("Loading CustomerData  ...")
+        data = pd.read_csv(path)
 
-    # Save model to a .pth file
-    torch.save(knn, 'knn_model.pth')
+        print("Processing Nan value  ...")
+        data = data.fillna(method='ffill')
+        data = data.fillna(method="bfill")
+        data.isnull().sum()
+
+        # column data type 변경
+        # 우선은 M1만으로 추천시스템 구축
+        print("Constructing Data  ...")
+        #print(f'{data[["CASH_AST_M1","DMST_AST_EVAL_M1","DMST_AST_PCHS_M1"]].values.dtype}')
+        #print(f'{data[["DMST_AST1_ITM_M1"]].values.dtype}')
+        data.loc[data["DMST_AST1_ITM_M1"]=="*"] = 0
+        data[["DMST_AST1_ITM_M1"]] = data[["DMST_AST1_ITM_M1"]].astype(dtype='float64')
+        #print(f'{data[["DMST_AST1_ITM_M1"]].values.dtype}')
+        dm_trainX = torch.tensor(data[["CASH_AST_M1","DMST_AST_EVAL_M1","DMST_AST_PCHS_M1"]].values)
+        dm_trainY = torch.tensor(data[["DMST_AST1_ITM_M1"]].values)
+
+        print("Loading Stock Code Information ...")
+        path = "/".join(base_path[:-3]+["data","cs_mkt_dataset","code.csv"])
+        code_inform = pd.read_csv(path, encoding='cp949')
+        
+        knn.fit(dm_trainX.float(), dm_trainY.float(), code_inform)
+
+        # Save model to a .pth file
+        torch.save(knn, 'knn_model.pth')
+
+    print("Loading Customer data who want to get recommendation ...")
+    # X_test에 고객 정보가 있어야 함.
+    # 지금 버전에서는 M1분기의 현금보유액, 매입주식평가액, 주식 매입액: 총 3개의 data필요.
+    X_test = torch.tensor([[10000000.0,23000000.0,49000000.0]]).float()
 
     # Load model from the .pth file
     loaded_knn = torch.load('knn_model.pth')
 
     # Predict labels for test data using loaded model
     code_name, predicted_labels = loaded_knn.predict(X_test)
-    print("Predicted labels using loaded model:", predicted_labels)
-    print("Predicted code_name using loaded model:\n", code_name)
-    return code_name, predicted_labels
+    #print("Predicted labels using loaded model:", predicted_labels)
+    #print("Predicted code_name using loaded model:\n", code_name)
+    #pdb.set_trace()
+    code_name = code_name[0].values
+    answer = f"The stocks that are right for you are as follows: Stocks: {', '.join(code_name)}"
+    return answer

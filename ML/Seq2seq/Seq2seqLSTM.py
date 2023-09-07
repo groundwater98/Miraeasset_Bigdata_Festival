@@ -1,8 +1,7 @@
 import torch.nn as nn
 import torch
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
@@ -14,6 +13,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 import openai
+
+from Seq2seq.Train import train, evaluate, test
+from Seq2seq.Dataset import CustomDataset, CustomInferenceDataset, collate_fn
+
 
 base = os.path.abspath(__file__)
 base = base.split('/')
@@ -184,119 +187,6 @@ class Seq2Seq(nn.Module):
         return outputs
 
 
-class CustomDataset(Dataset):
-    def __init__(self, filepath):
-        self.df = pd.read_csv(filepath)
-        
-        # Create a vocabulary based on the 'source' and 'target'
-        self.vocab = set() # 중복된 단어를 허용하지 않는 set
-        for _, row in self.df.iterrows():
-            self.vocab.update(row['source'].split())
-            self.vocab.update(row['target'].split())
-        
-        # 단어장에 추가
-        self.vocab.add('<sos>')
-        self.vocab.add('<eos>')
-
-        # Create a mapping from word to index
-        self.word2idx = {word: idx for idx, word in enumerate(self.vocab)} # (index, word) => {word: idx}
-        self.idx2word = {idx: word for word, idx in self.word2idx.items()} # (word, idx) => {idx, word}
-        self.pad_idx = 0
-
-    def __len__(self):
-        return len(self.df)
-
-    def tokenize_and_encode(self, sentence):
-        tokens = sentence.split() # 문장을 공백 기준으로 tokenize
-        return [self.word2idx[token] for token in tokens] # 각 토큰을 index로 변환
-
-    def __getitem__(self, index):
-        src = self.tokenize_and_encode(self.df['source'].iloc[index]) # source column의 해당 index 값을 가져온다.
-        trg = self.tokenize_and_encode(self.df['target'].iloc[index]) # target column의 해당 index 값을 가져온다.
-        # 타겟 시퀀스에 <sos>, <eos> 추가
-        trg = [self.word2idx['<sos>']] + trg + [self.word2idx['<eos>']]
-
-        return torch.tensor(src), torch.tensor(trg)
-
-
-def collate_fn(batch):
-    srcs, trgs = zip(*batch)
-    srcs = pad_sequence(srcs, padding_value=0, batch_first=False) # 여러 소스 시퀀스를 동일한 길이로 padding
-    trgs = pad_sequence(trgs, padding_value=0, batch_first=False) # 여러 타겟 시퀀스를 동일한 길이로 padding
-    return srcs, trgs
-
-
-def train(model, iterator, optimizer, criterion, clip):
-    model.train()
-    epoch_loss = 0
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    for i, (src, trg) in enumerate(iterator):
-        src, trg = src.to(device), trg.to(device) # src, trg => GPU
-        optimizer.zero_grad() # gradient 초기화
-        output = model(src, trg)
-
-        output_dim = output.shape[-1] # 출력 차원 가져오기
-        output = output[1:].view(-1, output_dim) # 첫 번째 토큰인 <sos> 제외
-        trg = trg[1:].view(-1)
-        loss = criterion(output, trg) # 예측된 output과 실제 trg를 사용하여 loss 계산
-        loss.backward() # backpropagation
-        torch.nn.utils.clip_grad_norm_(model.parameters(), clip) # gradient 폭발을 방지하기 위해 gradient 크기를 제한
-        optimizer.step() # 계산된 gradient를 바탕으로 model parameter update
-        epoch_loss += loss.item() 
-
-    return epoch_loss / len(iterator) # average loss 반환
-
-
-def evaluate(model, iterator, criterion):
-    model.eval() # 평가 모드
-    epoch_loss = 0
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    with torch.no_grad():
-        for i, (src, trg) in enumerate(iterator):
-            src, trg = src.to(device), trg.to(device)
-            output = model(src, trg, 0)  # turn off teacher forcing
-            output_dim = output.shape[-1]
-            output = output[1:].view(-1, output_dim)
-            trg = trg[1:].view(-1)
-            loss = criterion(output, trg)
-            epoch_loss += loss.item()
-
-    return epoch_loss / len(iterator)
-
-
-def test(model, iterator, criterion):
-    model.eval()
-    epoch_loss = 0
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    with torch.no_grad():
-        for i, (src, trg) in enumerate(iterator):
-            src, trg = src.to(device), trg.to(device)
-            output = model(src, trg, 0)  # turn off teacher forcing
-            output_dim = output.shape[-1]
-            output = output[1:].view(-1, output_dim)
-            trg = trg[1:].view(-1)
-            loss = criterion(output, trg)
-            epoch_loss += loss.item()
-
-        return epoch_loss / len(iterator)
-
-
-class CustomInferenceDataset: 
-    def __init__(self, vocab):
-        self.word2idx = vocab
-        self.idx2word = {idx: word for word, idx in self.word2idx.items()}
-        self.pad_idx = 0
-
-    # 주어진 sentence를 tokenize하고 각 토크늘 해당 index로 Encoding. 만약 주어진 token이 어휘 사전에 없다면 pad_idx로 대체
-    def tokenize_and_encode(self, sentence):
-        tokens = sentence.split() 
-        return [self.word2idx.get(token, self.pad_idx) for token in tokens]  
-
-    # 주어진 index의 token를 단어들의 list로 Decoding 그리고 문자열로 변환하고 pad_idx를 제외시킨다.
-    def decode(self, tokens):
-        return ' '.join([self.idx2word[token] for token in tokens if token != self.pad_idx])
-
-
 def generate_query(model, sentence, dataset, max_len=50):
     '''
     model: 학습된 모델
@@ -352,7 +242,7 @@ def get_sql(question):
     tr_path = "/".join(base[:-3]+["data","train.csv"])
     val_path = "/".join(base[:-3]+["data","val.csv"])
     test_path = "/".join(base[:-3]+["data","test.csv"])
-
+    model_path = "/".join(base[:-2]+["Seq2seq", f"{datetime.now().date()}_seq2seq-model.pt"])
     # training
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -394,24 +284,24 @@ def get_sql(question):
     valid_losses = []
 
     # PPL->Perplexity: 낮을 수록 좋다.
+    if not os.path.exists(model_path):
+        for epoch in range(N_EPOCHS):
+            train_loss = train(model, train_loader, optimizer, criterion, CLIP)
+            valid_loss = evaluate(model, val_loader, criterion)
 
-    for epoch in range(N_EPOCHS):
-        train_loss = train(model, train_loader, optimizer, criterion, CLIP)
-        valid_loss = evaluate(model, val_loader, criterion)
+            # Save the losses for plotting
+            train_losses.append(train_loss)
+            valid_losses.append(valid_loss)
 
-        # Save the losses for plotting
-        train_losses.append(train_loss)
-        valid_losses.append(valid_loss)
-
-        print(f'Epoch: {epoch + 1:02}')
-        print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
-        print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+            print(f'Epoch: {epoch + 1:02}')
+            print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
+            print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
 
 
-    test_loss = test(model, test_loader, criterion)
-    print(f'Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f}')
-
-    torch.save(model.state_dict(), 'seq2seq-model.pt')
+        test_loss = test(model, test_loader, criterion)
+        print(f'Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f}')
+        
+        torch.save(model.state_dict(), model_path)
 
     # generate sql
     openai.api_key = "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"
@@ -440,11 +330,12 @@ def get_sql(question):
     dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, HID_DIM, N_LAYERS, DEC_DROPOUT, attn)
     model = Seq2Seq(enc, dec, device).to(device)
 
-    model_path = "/".join(base[:-2]+["Seq2seq", f"{datetime.now().time()}_seq2seq-model.pt"])
-    model.load_state_dict(torch.load('seq2seq-model.pt'))
+    
+    model.load_state_dict(torch.load(model_path))
 
     # Get user input and generate SQL query
-    for _ in range(10):
+    # sql 여러 개 생성해서 그 중에서 괜찮은 거 뽑는 식으로 진행해도 될 듯.
+    for _ in range(1):
         user_input = question
         sql_query = generate_query(model, user_input, inference_dataset)
     #   print(f"Generated SQL Query: {sql_query}")

@@ -128,7 +128,7 @@ def gen_attention_mask(x):
 
 def evaluate(data_train, device, model):
     # 마지막 30*2일 입력으로 넣어서 그 이후 30일 예측 결과 얻음.
-    input = torch.tensor(data_train[-30*2:]).reshape(1,-1,1).to(device).float().to(device)
+    input = torch.tensor(data_train[-30*3:]).reshape(1,-1,1).to(device).float().to(device)
     model.eval()
     
     src_mask = model.generate_square_subsequent_mask(input.shape[1]).to(device)
@@ -160,8 +160,8 @@ def predict(stock, period):
     data_test = test["Close"].to_numpy()
 
     print(f"Preparing Dataset ...")
-    iw = 30*2
-    ow = 30
+    iw = 30*3
+    ow = 10
     train_dataset = windowDataset(data_train, input_window=iw, output_window=ow, stride=1)
     train_loader = DataLoader(train_dataset, batch_size=64)
     #test_dataset = windowDataset(data_test, input_window=iw, output_window=ow, stride=1)
@@ -170,12 +170,12 @@ def predict(stock, period):
     print(f"Model Constructing ...")
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     lr = 1e-4
-    model = TFModel(30*2, 30, 512, 8, 4, 0.1).to(device)
+    model = TFModel(30*3, 10, 2048, 16, 8, 0).to(device)
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     print("Trainig ...")
-    epoch = 10
+    epoch = 1
     model.train()
     progress = tqdm(train_loader, total=len(train_loader), leave=True)
     for i in tqdm(range(epoch)):
@@ -201,8 +201,19 @@ def predict(stock, period):
 
     plt.figure(figsize=(20,5))
     plt.plot(range(1419,1719),real[1419:], label="real")
-    plt.plot(range(1719-30,1719),result, label="predict")
+    plt.plot(range(1719-10,1719),result, label="predict")
     plt.legend()
     path = "/".join(base[:-2]+["models","prediction.jpg"])
     plt.savefig(path)
     print(f"Complete!!")
+
+    # 예측된 가격의 평균과, 직전의 값을 비교했을 때, 평균이 크면 사라, 작으면 사지 마라.
+    mean_pred = np.mean(result)
+    if mean_pred >= real[-1]:
+        answer = f"""You should buy the stock you want to know the price, because we predict the price will rise. 
+        Maybe it will be {mean_pred}won.""" 
+    else:
+        answer = f"""You shouldn't buy the stock you want to know the price, because we predict the price will go down. 
+        Maybe it will be {mean_pred}won."""
+
+    return answer 
