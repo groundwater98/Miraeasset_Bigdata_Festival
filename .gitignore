@@ -2,7 +2,12 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,python
 
 # Dataset
-ML/data
+data
+
+
+# Model Experiments
+ML/Test
+ML/knn/model.pth
 
 ### virtual env & DB ### 
 DataEngineering/de/
