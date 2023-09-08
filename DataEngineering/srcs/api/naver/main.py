@@ -29,7 +29,6 @@ def main():
         naver_api_handler.init_credential(headers)
         naver_api_handler.init_error_codes(config["error_messages"])
         response = naver_api_handler.get_response(query)
-        # ORM을 통해 DB애 저장
         
 if __name__ == "__main__":
     main()
