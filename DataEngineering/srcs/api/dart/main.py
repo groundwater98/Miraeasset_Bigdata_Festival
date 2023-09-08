@@ -27,24 +27,7 @@ def main():
 
     dart_handler = DartAPIHandler(configs, credentials, error_msgs)
     res = dart_handler.get_response()
-    # queries = config["search"]["query"]
-    # logger.debug("headers: %s", headers)
-    # for query in queries:
-    #     logger.debug("query: %s", query)
-    #     naver_api_handler = NaverAPIHandler()
-    #     naver_api_handler.init_configs({
-    #         "url": config["url"]["news"],
-    #         "start": config["search"]["start"],
-    #         "display": config["search"]["display"],
-    #         "sort": config["search"]["sort"],
-    #     })
-    #     naver_api_handler.init_credential(headers)
-    #     naver_api_handler.init_error_codes(config["error_messages"])
-    #     response = naver_api_handler.get_response(query)
-    #     logger.debug("response: %s", response)
-    #     output_file_dir = config["output"]["path"]
-    #     output = output_file_dir + f"{query}.csv"
-    #     csv.json_to_csv(response, output)
+    logger.debug(res)
         
 if __name__ == "__main__":
     main()

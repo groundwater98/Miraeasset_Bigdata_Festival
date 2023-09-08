@@ -79,7 +79,6 @@ def inqure_daily_itemprice(ACCESS_TOKEN:str, fid_input_iscd:str="", save=None):
         res = requests.get(URL, headers=headers, params=params, timeout=600)
         data = res.json()
         
-        save = True
         # dump json into flle
         if save:
             with open(f'./data/{fid_input_iscd}.json', 'w', encoding='utf-8') as f:
