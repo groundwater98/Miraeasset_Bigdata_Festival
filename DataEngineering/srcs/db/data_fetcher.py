@@ -1,34 +1,92 @@
 import os
 import toml
+import pymysql
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, Table, Column, MetaData, String, inspect, text
+import pandas as pd
 from tools.logger import Logger
-from db.database_manager import DatabaseManager
 
 config_path = os.getenv('DB_CONFIG_PATH')
 logger = Logger(__name__).get_logger()
 
-def initialize_database():
+def clear_table_contents(table_name):
+    engine = create_engine_from_config()
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
     try:
-        with open(config_path, "r") as f:
-            data = toml.load(f)
-        db_name = data["database"]["db_name"]
-        db_password = data["database"]["db_password"]
-        db_username = data["database"]["db_username"]
-        docker_host = data["database"]["docker_host"]
-        db_port = data["database"]["db_port"]
-        db_url = f"postgresql://{db_username}:{db_password}@{docker_host}:{db_port}/{db_name}"
-        db_manager = DatabaseManager(db_url)
-        return db_manager
-    except (FileNotFoundError, toml.TomlDecodeError) as e:
-        logger.error("Error occurred while loading the configuration file: %s", str(e))
+        delete_stmt = text(f"DELETE FROM {table_name}")
+        session.execute(delete_stmt)
+        session.commit()
+        logger.info(f"Deleted records from {table_name}")
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error: problem occurred while deleting records from {table_name}, {e}")
+    finally:
+        session.close()
     
-    logger.fatal("Terminate program with the unexpected action(s)")
-    raise SystemExit
-
-def app():
-    db_manager = initialize_database()
-    db_manager.create_all_table()
+# MySQL에 테이블 생성 함수
+def create_table_from_schema(engine, table_name, table):
+    logger.info(f"Creating table {table_name}...")
+    inspector = inspect(engine)
+    if table_name in inspector.get_table_names():
+        logger.info(f"Table {table_name} already exists")
+        return
+    else:
+        table.create(bind=engine)
+        logger.info(f"Table {table_name} created")
+        
+# 스키마 추출 함수
+def infer_schema_from_data(data):
+    schema = {}
+    for key, value in data.items():
+        if isinstance(value, int):
+            schema[key] = "INT"
+        elif isinstance(value, float):
+            schema[key] = "FLOAT"
+        else:
+            schema[key] = f"VARCHAR({max(255, len(str(value)))})"
     
-if __name__ == '__main__':
-    app()
+    print(schema)
+    return schema
 
-# db_manager.save_historical_data('AAPL', period='1y', interval='1d')
+def create_engine_from_config(config_path=None):
+    host = "db-iflf8-kr.vpc-pub-cdb.ntruss.com"
+    user = "youngmuk"
+    password = "youngmuk2!"
+    db = "inhive"
+
+    logger.info("Connecting to MySQL...")
+    # 데이터베이스 연결
+    engine = create_engine(f"mysql+pymysql://{user}:{password}@{host}/{db}")
+    return engine
+
+# 데이터 저장 함수
+def save_to_mysql_auto(data, table_name):
+    engine = create_engine_from_config(config_path)
+    logger.info("Connected to MySQL")
+
+    # 트랜젝션 세션 생성
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    # 데이터 저장
+    try:
+        logger.info("Saving data...")
+        df = pd.DataFrame([data] if isinstance(data, dict) else data)
+        logger.info(f"Dataframe shape: {df.shape}")
+        
+        df.to_sql(table_name, engine, if_exists='append', index=False)
+        logger.info(f"Data saved to MySQL table {table_name}")
+        
+    except Exception as e:
+        
+        logger.error(f"Error occurred: {e}")
+        
+        # 롤백
+        session.rollback()
+
+    finally:
+        # 연결 종료
+        session.close()
+        

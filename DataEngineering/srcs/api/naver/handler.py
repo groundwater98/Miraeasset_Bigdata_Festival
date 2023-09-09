@@ -2,6 +2,8 @@ import requests, json, html
 from datetime import datetime
 import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
+import pandas as pd
+from db.data_fetcher import save_to_mysql_auto, clear_table_contents
 from api.handler import APIHandler
 from tools import logger
 
@@ -9,6 +11,9 @@ logger = logger.Logger(__name__).get_logger()
 
 class NaverAPIHandler(APIHandler):
     def __init__(self):
+        
+        super().__init__()
+        
         self.configs = {
             "url": "",
             "query": "",
@@ -27,7 +32,7 @@ class NaverAPIHandler(APIHandler):
     
     def init_configs(self, configs):
         if configs["url"] == "":
-            logger.fatal("Error: %s", "Please set the configs for the Naver API.")
+            logger.fatal("Error: %s", "Please set the configs for the Naver API url.")
             
         self.configs = {
             "url": configs["url"],
@@ -37,11 +42,11 @@ class NaverAPIHandler(APIHandler):
         }
     
     
-    def init_credential(self, headers):
-        if headers["X-Naver-Client-Id"] == "" or headers["X-Naver-Client-Secret"] == "":
+    def init_credential(self, credentials):
+        if credentials["X-Naver-Client-Id"] == "" or credentials["X-Naver-Client-Secret"] == "":
             logger.fatal("Error: %s", "Please set the headers for the Naver API.")            
-        self.headers['X-Naver-Client-Id'] = headers["X-Naver-Client-Id"]
-        self.headers['X-Naver-Client-Secret'] = headers["X-Naver-Client-Secret"]
+        self.headers['X-Naver-Client-Id'] = credentials["X-Naver-Client-Id"]
+        self.headers['X-Naver-Client-Secret'] = credentials["X-Naver-Client-Secret"]
     
     
     def init_error_codes(self, error_codes):
@@ -70,6 +75,8 @@ class NaverAPIHandler(APIHandler):
             timeout=30
         )        
         items = []
+        
+        clear_table_contents('NaverNews')
         if response.status_code == 200:
             root = ET.fromstring(response.content)
             for item in root.iter('item'):
@@ -104,13 +111,16 @@ class NaverAPIHandler(APIHandler):
                     date_object = datetime.strptime(pubdate, date_format).isoformat()
                     
                 item_dict = {
-                    "query": query,
-                    "title": title if title is not None else '',
-                    'link': link if link is not None else '',
-                    'description': description if description is not None else '',
-                    'pubdate': date_object if date_object is not None else '',
+                    "Company": query,
+                    "Title": title if title is not None else '',
+                    'Link': link if link is not None else '',
+                    'Description': description if description is not None else '',
+                    'Pubdate': date_object if date_object is not None else '',
                 }
                 items.append(item_dict)
+            df_items = pd.DataFrame(items)
+            save_to_mysql_auto(df_items, 'NaverNews')
+                
             return json.dumps(items, indent=4, ensure_ascii=False)
         else:
             root = ET.fromstring(response.text)
@@ -118,3 +128,4 @@ class NaverAPIHandler(APIHandler):
             error_message = root.find('errorMessage').text
             logger.fatal("Error: %s", self.error_codes.get(error_code, 'Message: %s' % error_message))
             return None
+        

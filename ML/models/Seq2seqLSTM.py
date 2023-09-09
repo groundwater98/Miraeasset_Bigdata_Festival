@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
@@ -180,7 +181,7 @@ class Seq2Seq(nn.Module):
         
         return outputs
 
-
+      
 class CustomDataset(Dataset):
     def __init__(self, filepath):
         self.df = pd.read_csv(filepath)
