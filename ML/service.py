@@ -13,12 +13,16 @@ def get_menu(question) -> Tuple[str, str, bool]:
     My_OpenAI_key = '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'
     openai.api_key = My_OpenAI_key
     humor = False
+    """
+    # 카카오 챗봇과 연결 안했을 때는 cli로 질문 입력받음.
 
     print(f"Hi I'm Sacretary for your Investment.\n What can I help you?")
     print(f"=========Here is services we provide=========")
     print(f"1. Information Summary\n2. Prediction\n3. Recommendation\n4. Quit")
     print(f"=============================================\n")
     print(f"You can also give the sentence.")
+    question = input(f"Please write the service name, number you want or the sentence. ")
+    """
     question = question
 
     role = """Your role is to know well what kind of service the other person wants from what they say. 
@@ -71,82 +75,83 @@ def get_menu(question) -> Tuple[str, str, bool]:
 
 
 def kakao(question):
-    while True:
-        service, question, humor = get_menu(question)
-        if not humor:
-            if service == 'Information Summary':
-                print(f"Labeling & Information Summary ...")
-                role = """Your role is to find out which company the other person wants 
-                news from and what period of time they want news from the sentences they are speaking. 
-                The answer format should be as follows.
+    service, question, humor = get_menu(question)
+    if not humor:
+        if service == 'Information Summary':
+            print(f"Labeling & Information Summary ...")
+            role = """Your role is to find out which company the other person wants 
+            news from and what period of time they want news from the sentences they are speaking. 
+            The answer format should be as follows.
 
-                form:
-                Company you want to know:
-                Period you want to know:"""
+            form:
+            Company you want to know:
+            Period you want to know:"""
 
-                answer = openai.ChatCompletion.create(
-                    model="gpt-4",
-                    messages=[
-                            {"role": "system", "content": role},
-                            {"role": "user", "content": question},
-                        ]
-                )
+            answer = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                        {"role": "system", "content": role},
+                        {"role": "user", "content": question},
+                    ]
+            )
 
-                answer = answer.choices[0]['message']['content']
+            answer = answer.choices[0]['message']['content']
+            #pdb.set_trace()
+            answer = answer.split("\n")
+            company = answer[0].split(":")[1].strip()
+            period = answer[1].split(":")[1].strip()
+            question = f"{company}의 {period}전 뉴스를 알고싶어."
+
+            # 실제로 sql로 db접근은 미구현 했기때문에
+            # news는 None 객체
+            news = Seq2seqLSTM.get_sql(question)
+            answer = chatGPT.labeling_module(news) 
+        elif service == 'Stock Price Prediction':
+            role = """You will receive a statement asking for a stock price prediction, 
+            and your role is specialized in finding out which stock you want to predict. 
+            Please answer in the first format below. If the forecast period and stock are not specified, 
+            please answer in the second format.
+
+            First answer format:
+            Predicted stocks:
+            Forecast Period: only days
+
+            Second response format:
+            There is insufficient information to satisfy your needs. Please tell me specifically what stock price you want and when.
+            Example) Predict Apple's stock price tomorrow."""
+
+            answer = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                        {"role": "system", "content": role},
+                        {"role": "user", "content": question},
+                    ]
+            )
+            answer = answer.choices[0]['message']['content']
+            if answer.find("First answer format") == -1:
+                # 첫번째 대답 형식 아닌 경우: 예측 종목도 없고, 기간도 없는 경우
                 #pdb.set_trace()
                 answer = answer.split("\n")
-                company = answer[0].split(":")[1].strip()
-                period = answer[1].split(":")[1].strip()
-                question = f"{company}의 {period}전 뉴스를 알고싶어."
-
-                # 실제로 sql로 db접근은 미구현 했기때문에
-                # news는 None 객체
-                news = Seq2seqLSTM.get_sql(question)
-                answer = chatGPT.labeling_module(news) 
-            elif service == 'Stock Price Prediction':
-                role = """You will receive a statement asking for a stock price prediction, 
-                and your role is specialized in finding out which stock you want to predict. 
-                Please answer in the first format below. If the forecast period and stock are not specified, 
-                please answer in the second format.
-
-                First answer format:
-                Predicted stocks:
-                Forecast Period: only days
-
-                Second response format:
-                There is insufficient information to satisfy your needs. Please tell me specifically what stock price you want and when.
-                Example) Predict Apple's stock price tomorrow."""
-
-                answer = openai.ChatCompletion.create(
-                    model="gpt-4",
-                    messages=[
-                            {"role": "system", "content": role},
-                            {"role": "user", "content": question},
-                        ]
-                )
-                answer = answer.choices[0]['message']['content']
-                if answer.find("First answer format") == -1:
-                    # 첫번째 대답 형식 아닌 경우: 예측 종목도 없고, 기간도 없는 경우
-                    #pdb.set_trace()
-                    answer = answer.split("\n")
-                    stock = answer[1].split(":")[0]
-                    period = int(answer[1].split(":")[1].split()[0])
-                    answer = f"I want to know the price of {stock} stock for {period} days."
-                else:
-                    # 두번째 대답 형식 아닌 경우: 예측, 기간 특정된 경우
-                    pass
-                answer = predict.predict(stock, period)
-            elif service == 'Stock Recommendation':
-                user_inform = "우리 서비스 이용중인 고객의 정보를 불러와야 함."
-                answer = recommend.recommend(user_inform)
+                stock = answer[1].split(":")[0]
+                period = int(answer[1].split(":")[1].split()[0])
+                answer = f"I want to know the price of {stock} stock for {period} days."
             else:
-                print(f"\n\nPlease write the correct service!!")
-            refined_answer = chatGPT.Refine_module(answer)
-            kor2eng = chatGPT.Kor2Eng(refined_answer)
-            print("="*30)
-            print(f"Here's our final answer:")
-            print(kor2eng)
-            return kor2eng
+                # 두번째 대답 형식 아닌 경우: 예측, 기간 특정된 경우
+                pass
+            answer = predict.predict(stock, period)
+        elif service == 'Stock Recommendation':
+            user_inform = "우리 서비스 이용중인 고객의 정보를 불러와야 함."
+            answer = recommend.recommend(user_inform)
+        else:
+            print(f"\n\nPlease write the correct service!!")
+        refined_answer = chatGPT.Refine_module(answer)
+        kor2eng = chatGPT.Kor2Eng(refined_answer)
+        print("="*30)
+        print(f"Here's our final answer:")
+        print(kor2eng)
+        return kor2eng
+    else:
+        return service
         
 
 if __name__ == '__main__':
