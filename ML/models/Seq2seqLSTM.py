@@ -1,6 +1,21 @@
 import torch.nn as nn
 import torch
 
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+
+import os
+import math
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+import openai
+
+
 class Encoder(nn.Module):
     def __init__(self, input_dim, emb_dim, hid_dim, n_layers, dropout):
         '''
@@ -26,6 +41,7 @@ class Encoder(nn.Module):
         embedded = self.dropout(self.embedding(src))
         outputs, (hidden, cell) = self.rnn(embedded)
         return outputs, hidden, cell
+
 
 class Attention(nn.Module):
     def __init__(self, hid_dim):
@@ -120,6 +136,7 @@ class Decoder(nn.Module):
         
         return prediction, hidden, cell
 
+
 class Seq2Seq(nn.Module):
     def __init__(self, encoder, decoder, device):
         super().__init__()
@@ -163,3 +180,264 @@ class Seq2Seq(nn.Module):
             input = trg[t] if teacher_force else top1
         
         return outputs
+
+      
+class CustomDataset(Dataset):
+    def __init__(self, filepath):
+        self.df = pd.read_csv(filepath)
+        
+        # Create a vocabulary based on the 'source' and 'target'
+        self.vocab = set() # 중복된 단어를 허용하지 않는 set
+        for _, row in self.df.iterrows():
+            self.vocab.update(row['source'].split())
+            self.vocab.update(row['target'].split())
+        
+        # 단어장에 추가
+        self.vocab.add('<sos>')
+        self.vocab.add('<eos>')
+
+        # Create a mapping from word to index
+        self.word2idx = {word: idx for idx, word in enumerate(self.vocab)} # (index, word) => {word: idx}
+        self.idx2word = {idx: word for word, idx in self.word2idx.items()} # (word, idx) => {idx, word}
+        self.pad_idx = 0
+
+    def __len__(self):
+        return len(self.df)
+
+    def tokenize_and_encode(self, sentence):
+        tokens = sentence.split() # 문장을 공백 기준으로 tokenize
+        return [self.word2idx[token] for token in tokens] # 각 토큰을 index로 변환
+
+    def __getitem__(self, index):
+        src = self.tokenize_and_encode(self.df['source'].iloc[index]) # source column의 해당 index 값을 가져온다.
+        trg = self.tokenize_and_encode(self.df['target'].iloc[index]) # target column의 해당 index 값을 가져온다.
+        # 타겟 시퀀스에 <sos>, <eos> 추가
+        trg = [self.word2idx['<sos>']] + trg + [self.word2idx['<eos>']]
+
+        return torch.tensor(src), torch.tensor(trg)
+
+
+def collate_fn(batch):
+    srcs, trgs = zip(*batch)
+    srcs = pad_sequence(srcs, padding_value=0, batch_first=False) # 여러 소스 시퀀스를 동일한 길이로 padding
+    trgs = pad_sequence(trgs, padding_value=0, batch_first=False) # 여러 타겟 시퀀스를 동일한 길이로 padding
+    return srcs, trgs
+
+
+def train(model, iterator, optimizer, criterion, clip):
+    model.train()
+    epoch_loss = 0
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    for i, (src, trg) in enumerate(iterator):
+        src, trg = src.to(device), trg.to(device) # src, trg => GPU
+        optimizer.zero_grad() # gradient 초기화
+        output = model(src, trg)
+
+        output_dim = output.shape[-1] # 출력 차원 가져오기
+        output = output[1:].view(-1, output_dim) # 첫 번째 토큰인 <sos> 제외
+        trg = trg[1:].view(-1)
+        loss = criterion(output, trg) # 예측된 output과 실제 trg를 사용하여 loss 계산
+        loss.backward() # backpropagation
+        torch.nn.utils.clip_grad_norm_(model.parameters(), clip) # gradient 폭발을 방지하기 위해 gradient 크기를 제한
+        optimizer.step() # 계산된 gradient를 바탕으로 model parameter update
+        epoch_loss += loss.item() 
+
+    return epoch_loss / len(iterator) # average loss 반환
+
+
+def evaluate(model, iterator, criterion):
+    model.eval() # 평가 모드
+    epoch_loss = 0
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    with torch.no_grad():
+        for i, (src, trg) in enumerate(iterator):
+            src, trg = src.to(device), trg.to(device)
+            output = model(src, trg, 0)  # turn off teacher forcing
+            output_dim = output.shape[-1]
+            output = output[1:].view(-1, output_dim)
+            trg = trg[1:].view(-1)
+            loss = criterion(output, trg)
+            epoch_loss += loss.item()
+
+    return epoch_loss / len(iterator)
+
+
+def test(model, iterator, criterion):
+    model.eval()
+    epoch_loss = 0
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    with torch.no_grad():
+        for i, (src, trg) in enumerate(iterator):
+            src, trg = src.to(device), trg.to(device)
+            output = model(src, trg, 0)  # turn off teacher forcing
+            output_dim = output.shape[-1]
+            output = output[1:].view(-1, output_dim)
+            trg = trg[1:].view(-1)
+            loss = criterion(output, trg)
+            epoch_loss += loss.item()
+
+        return epoch_loss / len(iterator)
+
+
+class CustomInferenceDataset: 
+    def __init__(self, vocab):
+        self.word2idx = vocab
+        self.idx2word = {idx: word for word, idx in self.word2idx.items()}
+        self.pad_idx = 0
+
+    # 주어진 sentence를 tokenize하고 각 토크늘 해당 index로 Encoding. 만약 주어진 token이 어휘 사전에 없다면 pad_idx로 대체
+    def tokenize_and_encode(self, sentence):
+        tokens = sentence.split() 
+        return [self.word2idx.get(token, self.pad_idx) for token in tokens]  
+
+    # 주어진 index의 token를 단어들의 list로 Decoding 그리고 문자열로 변환하고 pad_idx를 제외시킨다.
+    def decode(self, tokens):
+        return ' '.join([self.idx2word[token] for token in tokens if token != self.pad_idx])
+
+
+def generate_query(model, sentence, dataset, max_len=50):
+    '''
+    model: 학습된 모델
+    sentence: 변환하거나 번역하고자 하는 입력 문장
+    dataset: CustomInferenceDataset 클래스의 인스턴스
+    max_len: 생성할 출력 문장의 최대 길이
+    '''
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.eval() # 평가 모드
+    with torch.no_grad(): # Gradient 계산을 비활성화
+        tokens = dataset.tokenize_and_encode(sentence) 
+        src_tensor = torch.LongTensor(tokens).unsqueeze(1).to(device) # 입력 문장을 텐서로 변환하고 텐서를 모델에 맞게 변형
+        src_len = torch.LongTensor([len(tokens)])
+        
+        trg_indexes = [dataset.word2idx['<sos>']]  # Assuming you have <sos> token for start
+        for _ in range(max_len): # 모델은 현재까지의 출력 토큰을 사용하여 다음 토큰을 예측한다.
+            trg_tensor = torch.LongTensor(trg_indexes).unsqueeze(1).to(device)
+            output = model(src_tensor, trg_tensor)
+            pred_token = output.argmax(2)[-1, :].item() # argmax(2)를 사용하여 가장 확률이 높은 토큰의 인덱스를 얻는다.
+            trg_indexes.append(pred_token)
+            if pred_token == dataset.word2idx['<eos>']:  # Assuming you have <eos> token for end
+                break
+        trg_tokens = trg_indexes[1:]
+        
+        # 출력 문장 끝에 <eos> 토큰이 있다면 제거
+        if trg_tokens[-1] == dataset.word2idx['<eos>']:
+            trg_tokens = trg_tokens[:-1]
+        
+        query = dataset.decode(trg_tokens)
+        return query
+
+
+def correct_sql_by_gpt3(user_input, input_query):
+    # GPT-3로부터 SQL 쿼리 교정 요청
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "너는 이제부터 Seq2seq LSTM에서 나온 SQL Query를 교정해주는 역할이야. 답변은 다 생략하고 무조건 수정된 SQL Query만 출력해줘."},
+            {"role": "user", "content": "삼성전자의 최신 뉴스를 요약해줘."},
+            {"role": "assistant", "content": "SELECT title, link, description, pubdate FROM 삼성전자 ORDER BY pubdate DESC LIMIT 1"},
+            {"role": "user", "content": user_input},
+            {"role": "user", "content": f"사용자의 입력인 '{user_input}'에 기반해서 Seq2seq LSTM Model이 만들어낸 SQL Query인 '{input_query}'을 올바른 형태로 수정해줘."}
+            
+        ],
+    )
+    corrected_query = response.choices[0]['message']['content'].strip()
+    return corrected_query
+
+
+def get_sql(question):
+    # training
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # Load and process the data
+    train_dataset = CustomDataset('/root/workspace/miraeasset-festa/ML/models/train.csv')
+    val_dataset = CustomDataset('/root/workspace/miraeasset-festa/ML/models/val.csv')
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, collate_fn=collate_fn)
+    test_dataset = CustomDataset('/root/workspace/miraeasset-festa/ML/models/test.csv')
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, collate_fn=collate_fn)
+
+
+    # Hyperparameters
+    INPUT_DIM = len(train_dataset.word2idx) + 1  # +1 for padding index
+    OUTPUT_DIM = INPUT_DIM
+    ENC_EMB_DIM = 256
+    DEC_EMB_DIM = 256
+    HID_DIM = 512
+    N_LAYERS = 2
+    ENC_DROPOUT = 0.5
+    DEC_DROPOUT = 0.5
+
+    # Create the model instances
+    enc = Encoder(INPUT_DIM, ENC_EMB_DIM, HID_DIM, N_LAYERS, ENC_DROPOUT)
+    attn = Attention(HID_DIM)
+    dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, HID_DIM, N_LAYERS, DEC_DROPOUT, attn)
+    model = Seq2Seq(enc, dec, device).to(device)
+
+    #optimizer = optim.SGD(model.parameters(),lr=0.01)
+    optimizer = optim.Adam(model.parameters())
+    criterion = nn.CrossEntropyLoss(ignore_index=train_dataset.pad_idx) # loss function
+
+    N_EPOCHS = 10
+    CLIP = 1
+
+    # matplotlib으로 시각화를 하기 위한 코드
+    train_losses = []
+    valid_losses = []
+
+    # PPL->Perplexity: 낮을 수록 좋다.
+
+    for epoch in range(N_EPOCHS):
+        train_loss = train(model, train_loader, optimizer, criterion, CLIP)
+        valid_loss = evaluate(model, val_loader, criterion)
+
+        # Save the losses for plotting
+        train_losses.append(train_loss)
+        valid_losses.append(valid_loss)
+
+        print(f'Epoch: {epoch + 1:02}')
+        print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
+        print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+
+
+    test_loss = test(model, test_loader, criterion)
+    print(f'Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f}')
+
+    torch.save(model.state_dict(), 'seq2seq-model.pt')
+
+    # generate sql
+    openai.api_key = "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"
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # Inference를 위한 Dataset => trained model로 새로운 입력 문장을 생성할 때 이 Dataset을 사용하여 입력 문장을 적합한 형태로 변환하고, 모델의 출력을 다시 사람이 이해할 수 있는 형태로 변환한다.
+
+    # Load vocabulary from training dataset
+    train_dataset = CustomDataset('/root/workspace/miraeasset-festa/ML/models/train.csv')
+    vocab = train_dataset.word2idx
+    inference_dataset = CustomInferenceDataset(vocab)
+
+    # Load the trained model
+    INPUT_DIM = len(vocab) + 1
+    OUTPUT_DIM = INPUT_DIM
+    ENC_EMB_DIM = 256
+    DEC_EMB_DIM = 256
+    HID_DIM = 512
+    N_LAYERS = 2
+    ENC_DROPOUT = 0.5
+    DEC_DROPOUT = 0.5
+
+
+    enc = Encoder(INPUT_DIM, ENC_EMB_DIM, HID_DIM, N_LAYERS, ENC_DROPOUT)
+    attn = Attention(HID_DIM)
+    dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, HID_DIM, N_LAYERS, DEC_DROPOUT, attn)
+    model = Seq2Seq(enc, dec, device).to(device)
+
+    model.load_state_dict(torch.load('seq2seq-model.pt'))
+
+    # Get user input and generate SQL query
+    for _ in range(10):
+        user_input = question
+        sql_query = generate_query(model, user_input, inference_dataset)
+    #   print(f"Generated SQL Query: {sql_query}")
+        corrected_sql_query = correct_sql_by_gpt3(user_input, sql_query)
+        print(f"final SQL Query: {corrected_sql_query}")
+    return corrected_sql_query
