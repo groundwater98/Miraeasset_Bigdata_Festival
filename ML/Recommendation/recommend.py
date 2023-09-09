@@ -78,7 +78,7 @@ def recommend(user_inform):
         knn.fit(dm_trainX.float(), dm_trainY.float(), code_inform)
 
         # Save model to a .pth file
-        torch.save(knn, 'knn_model.pth')
+        torch.save(knn, model_path)
 
     print("Loading Customer data who want to get recommendation ...")
     # X_test에 고객 정보가 있어야 함.
@@ -86,7 +86,7 @@ def recommend(user_inform):
     X_test = torch.tensor([[10000000.0,23000000.0,49000000.0]]).float()
 
     # Load model from the .pth file
-    loaded_knn = torch.load('knn_model.pth')
+    loaded_knn = torch.load(model_path)
 
     # Predict labels for test data using loaded model
     code_name, predicted_labels = loaded_knn.predict(X_test)
