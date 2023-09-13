@@ -283,6 +283,7 @@ def predict(stock, period):
                 optimizer.step()
                 batchloss += loss
             print(f"{i+1}th epoch MSEloss:" + "{:0.6f}".format(batchloss.cpu().item() / len(train_loader)))
+        torch.save(model, model_path)
         """
         model.train()
         progress = tqdm(range(epoch))
@@ -303,7 +304,7 @@ def predict(stock, period):
             progress.set_description("{:0.5f}".format(batchloss.cpu().item() / len(train_loader)))
 
         """
-    torch.save(model, model_path)
+    torch.save(model.state_dict(), model_path)
     print("Predicting ...")
     result = evaluate(data_test, device, model, iw, n_attr, ow)
     

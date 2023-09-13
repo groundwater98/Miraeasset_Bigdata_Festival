@@ -293,9 +293,9 @@ def get_sql(question):
             train_losses.append(train_loss)
             valid_losses.append(valid_loss)
 
-            print(f'Epoch: {epoch + 1:02}')
-            print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
-            print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+            #print(f'Epoch: {epoch + 1:02}')
+            #print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
+            #print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
 
 
         test_loss = test(model, test_loader, criterion)
