@@ -132,7 +132,7 @@ def kakao(question):
                 # 첫번째 대답 형식 아닌 경우: 예측 종목도 없고, 기간도 없는 경우
                 #pdb.set_trace()
                 answer = answer.split("\n")
-                stock = answer[1].split(":")[0]
+                stock = answer[0].split(":")[1].strip()
                 period = int(answer[1].split(":")[1].split()[0])
                 answer = f"I want to know the price of {stock} stock for {period} days."
             else:

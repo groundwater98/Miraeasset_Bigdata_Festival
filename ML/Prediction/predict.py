@@ -3,6 +3,7 @@
 import math 
 import os
 import pdb
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -36,7 +37,6 @@ def save_stock_plot(rawdata, stock_name="LG_chme"):
 class windowDataset(Dataset):
     def __init__(self, y, input_window=80, output_window=20, stride=5, n_attr=1):
         #총 데이터의 개수
-        print(y.shape)
 
         L = y.shape[0]
         #stride씩 움직일 때 생기는 총 sample의 개수
@@ -73,16 +73,14 @@ class windowDataset(Dataset):
                 start_y = stride*i + input_window
                 end_y = start_y + output_window
                 Y[:,:,i] = y[start_y:end_y]
-            print(X.shape)
-            print(Y.shape)
             X = X.reshape(X.shape[2], X.shape[0], X.shape[1])
             Y = Y.reshape(Y.shape[2], Y.shape[0], Y.shape[1])
             self.x = X
             self.y = Y
         self.len = len(X)
     def __getitem__(self, i):
-        #return self.x[i], self.y[i]
-        return self.x[i], self.y[i, :-1], self.y[i,1:]
+        return self.x[i], self.y[i]
+        #return self.x[i], self.y[i, :-1], self.y[i,1:]
     def __len__(self):
         return self.len
     
@@ -177,10 +175,7 @@ def gen_attention_mask(x):
 
 def evaluate(data_train, device, model, iw, n_attr, length):
     # 마지막 30*2일 입력으로 넣어서 그 이후 30일 예측 결과 얻음.
-    """
-    print(data_train.shape)
     input = torch.tensor(data_train[-iw:]).reshape(1,-1,n_attr).to(device).float().to(device)
-    print(input.shape)
     model.eval()
     
     src_mask = model.generate_square_subsequent_mask(input.shape[1]).to(device)
@@ -198,7 +193,7 @@ def evaluate(data_train, device, model, iw, n_attr, length):
         predictions = predictions[:, -1:, :]
         output = torch.cat([output, predictions.to(device)], axis=1)
     return torch.squeeze(output, axis=0).detach().cpu().numpy()[1:]
-
+    """
 
 def predict(stock, period):
     global base
@@ -207,10 +202,11 @@ def predict(stock, period):
           of the designated company.\n\n")
     # 이 코드대신 지수형이 spl로 얻어온 data가 rawdata가 되어야 함.
     # 추가적인 정보 없는건 1729일
-    """
+    
     print(f"Loading Stock Data ...")
     n_attr = 1
     path = "/".join(base[:-3]+["data","lg_chem_closing_prices.csv"])
+    model_path = "/".join(base[:-2]+["Prediction", f"{stock}_{datetime.now().date()}.pth"])
     rawdata = pd.read_csv(path)
     
     print(f"Saving Stock data as .png ...")
@@ -221,7 +217,7 @@ def predict(stock, period):
     rawdata["Close"] = min_max_scaler.fit_transform(rawdata["Close"].to_numpy().reshape(-1,n_attr))
 
     print(f"Spliting Data ...")
-    iw = 30*9
+    iw = 30*7
     ow = 10
    
     train = rawdata[:-iw]
@@ -249,8 +245,8 @@ def predict(stock, period):
     rawdata.loc[:,rawdata.columns] = min_max_scaler.fit_transform(rawdata.to_numpy())
 
     print(f"Spliting Data ...")
-    iw = 30
-    ow = 10
+    iw = 60
+    ow = 5
     #pdb.set_trace()
     train = rawdata[:-(iw)]
     data_train = train.to_numpy()
@@ -262,55 +258,58 @@ def predict(stock, period):
     train_loader = DataLoader(train_dataset, batch_size=64)
     #test_dataset = windowDataset(data_test, input_window=iw, output_window=ow, stride=1, n_attr=n_attr)
     #test_loader = DataLoader(test_dataset)
-    
+    """
     print(f"Model Constructing ...")
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     lr = 1e-4
-    model = TFModel2(256, 8, 256, 2, 0.1, n_attr).to(device)
-    #model = TFModel2(iw, ow, 512, 8, 4, 0.4, n_attr).to(device)
+    #model = TFModel2(256, 8, 256, 2, 0.1, n_attr).to(device)
+    model = TFModel(iw, ow, 512, 8, 4, 0.4, n_attr).to(device)
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     
-    print("Trainig ...")
-    epoch = 10
-    """
-    model.train()
-    progress = tqdm(train_loader, total=len(train_loader), leave=True)
-    for i in tqdm(range(epoch)):
-        batchloss = 0.0
-        for (inputs, outputs) in train_loader:
-            optimizer.zero_grad()
-            src_mask = model.generate_square_subsequent_mask(inputs.shape[1]).to(device)
-            result = model(inputs.float().to(device),  src_mask)
-            loss = criterion(result, outputs[:,:,0].float().to(device))
-            loss.backward()
-            optimizer.step()
-            batchloss += loss
-        progress.set_description("loss: {:0.6f}".format(batchloss.cpu().item() / len(train_loader)))
-    """
-    model.train()
-    progress = tqdm(range(epoch))
-    for i in progress:
-        batchloss = 0.0
+    if not os.path.exists(model_path):
+        print("Trainig ...")
+        epoch = 10
         
-        for (inputs, dec_inputs, outputs) in train_loader:
-            optimizer.zero_grad()
-            src_mask = model.generate_square_subsequent_mask(inputs.shape[1]).to(device)
-            tgt_mask = model.generate_square_subsequent_mask(dec_inputs.shape[1]).to(device)
-
-            result = model(inputs.float().to(device), dec_inputs.float().to(device), src_mask, tgt_mask)
-            loss = criterion(result.permute(1,0,2), outputs.float().to(device))
+        model.train()
+        for i in range(epoch):
+            batchloss = 0.0
+            for (inputs, outputs) in tqdm(train_loader):
+                optimizer.zero_grad()
+                src_mask = model.generate_square_subsequent_mask(inputs.shape[1]).to(device)
+                result = model(inputs.float().to(device),  src_mask)
+                loss = criterion(result, outputs[:,:,0].float().to(device))
+                loss.backward()
+                optimizer.step()
+                batchloss += loss
+            print(f"{i+1}th epoch MSEloss:" + "{:0.6f}".format(batchloss.cpu().item() / len(train_loader)))
+        torch.save(model, model_path)
+        """
+        model.train()
+        progress = tqdm(range(epoch))
+        for i in progress:
+            batchloss = 0.0
             
-            loss.backward()
-            optimizer.step()
-            batchloss += loss
-        progress.set_description("{:0.5f}".format(batchloss.cpu().item() / len(train_loader)))
+            for (inputs, dec_inputs, outputs) in train_loader:
+                optimizer.zero_grad()
+                src_mask = model.generate_square_subsequent_mask(inputs.shape[1]).to(device)
+                tgt_mask = model.generate_square_subsequent_mask(dec_inputs.shape[1]).to(device)
 
+                result = model(inputs.float().to(device), dec_inputs.float().to(device), src_mask, tgt_mask)
+                loss = criterion(result.permute(1,0,2), outputs.float().to(device))
+                
+                loss.backward()
+                optimizer.step()
+                batchloss += loss
+            progress.set_description("{:0.5f}".format(batchloss.cpu().item() / len(train_loader)))
 
+        """
+    torch.save(model.state_dict(), model_path)
     print("Predicting ...")
     result = evaluate(data_test, device, model, iw, n_attr, ow)
+    
 
-    """
+   
     result = min_max_scaler.inverse_transform(result)[0]
     real = rawdata["Close"].to_numpy()
     real = min_max_scaler.inverse_transform(real.reshape(-1,1))[:,0]
@@ -323,11 +322,11 @@ def predict(stock, period):
     result = min_max_scaler.inverse_transform(result).reshape(-1,10)[3]
     real = rawdata.to_numpy()
     real = min_max_scaler.inverse_transform(real)[:,3]
-    
+     """
     plt.figure(figsize=(20,5))
-    plt.plot(range(1419,1719),real[1420:], label="real")
-    #plt.plot(range(1419,1719),real[1419:],label="real")
-    plt.plot(range(1719-10,1719),result, label="predict")
+    #plt.plot(range(1419,1719),real[1420:], label="real")
+    plt.plot(range(1419,1719),real[1418:],label="real")
+    plt.plot(range(1719-ow,1719),result, label="predict")
     plt.legend()
     path = "/".join(base[:-2]+["models","prediction2.jpg"])
     plt.savefig(path)
@@ -343,3 +342,6 @@ def predict(stock, period):
         Maybe it will be {mean_pred}won."""
 
     return answer 
+
+if __name__=="__main__":
+    print(predict("", ""))

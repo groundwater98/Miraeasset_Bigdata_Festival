@@ -3,6 +3,7 @@ import pdb
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -51,34 +52,49 @@ def recommend(user_inform):
     print("Constructing k-NN classifier ...")
     knn = KNN(k=5)
       
-    if not os.path.exists(model_path):
-        print("Loading CustomerData  ...")
-        data = pd.read_csv(path)
+    #if not os.path.exists(model_path):
+    print("Loading CustomerData  ...")
+    data = pd.read_csv(path)
 
-        print("Processing Nan value  ...")
-        data = data.fillna(method='ffill')
-        data = data.fillna(method="bfill")
-        data.isnull().sum()
+    print("Processing Nan value  ...")
+    data = data.fillna(method='ffill')
+    data = data.fillna(method="bfill")
+    data.isnull().sum()
 
-        # column data type 변경
-        # 우선은 M1만으로 추천시스템 구축
-        print("Constructing Data  ...")
-        #print(f'{data[["CASH_AST_M1","DMST_AST_EVAL_M1","DMST_AST_PCHS_M1"]].values.dtype}')
-        #print(f'{data[["DMST_AST1_ITM_M1"]].values.dtype}')
-        data.loc[data["DMST_AST1_ITM_M1"]=="*"] = 0
-        data[["DMST_AST1_ITM_M1"]] = data[["DMST_AST1_ITM_M1"]].astype(dtype='float64')
-        #print(f'{data[["DMST_AST1_ITM_M1"]].values.dtype}')
-        dm_trainX = torch.tensor(data[["CASH_AST_M1","DMST_AST_EVAL_M1","DMST_AST_PCHS_M1"]].values)
-        dm_trainY = torch.tensor(data[["DMST_AST1_ITM_M1"]].values)
+    # column data type 변경
+    # 우선은 M1만으로 추천시스템 구축
+    print("Constructing Data  ...")
+    #print(f'{data[["CASH_AST_M1","DMST_AST_EVAL_M1","DMST_AST_PCHS_M1"]].values.dtype}')
+    #print(f'{data[["DMST_AST1_ITM_M1"]].values.dtype}')
+    data.loc[data["DMST_AST1_ITM_M1"]=="*"] = 0
+    data[["DMST_AST1_ITM_M1"]] = data[["DMST_AST1_ITM_M1"]].astype(dtype='float64')
+    #print(f'{data[["DMST_AST1_ITM_M1"]].values.dtype}')
+    dm_trainX = torch.tensor(data[["CASH_AST_M1","DMST_AST_EVAL_M1","DMST_AST_PCHS_M1"]].values)
+    dm_trainY = torch.tensor(data[["DMST_AST1_ITM_M1"]].values)
 
-        print("Loading Stock Code Information ...")
-        path = "/".join(base_path[:-3]+["data","cs_mkt_dataset","code.csv"])
-        code_inform = pd.read_csv(path, encoding='cp949')
-        
-        knn.fit(dm_trainX.float(), dm_trainY.float(), code_inform)
+    # Create a 3D scatter plot
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(data["CASH_AST_M1"], data["DMST_AST_EVAL_M1"], data["DMST_AST_PCHS_M1"], c='blue', marker='o', label='Data Points')
 
-        # Save model to a .pth file
-        torch.save(knn, model_path)
+    # Customize the plot
+    ax.set_title('3D Scatter Plot')
+    ax.set_xlabel('X-axis')
+    ax.set_ylabel('Y-axis')
+    ax.set_zlabel('Z-axis')
+    ax.legend()
+
+    # Show the plot
+    plt.show()
+
+    print("Loading Stock Code Information ...")
+    path = "/".join(base_path[:-3]+["data","cs_mkt_dataset","code.csv"])
+    code_inform = pd.read_csv(path, encoding='cp949')
+    
+    knn.fit(dm_trainX.float(), dm_trainY.float(), code_inform)
+
+    # Save model to a .pth file
+    torch.save(knn, model_path)
 
     print("Loading Customer data who want to get recommendation ...")
     # X_test에 고객 정보가 있어야 함.
@@ -96,3 +112,7 @@ def recommend(user_inform):
     code_name = code_name[0].values
     answer = f"The stocks that are right for you are as follows: Stocks: {', '.join(code_name)}"
     return answer
+
+
+if __name__=="__main__":
+    recommend("")

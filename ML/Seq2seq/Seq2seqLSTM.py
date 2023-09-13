@@ -293,9 +293,9 @@ def get_sql(question):
             train_losses.append(train_loss)
             valid_losses.append(valid_loss)
 
-            print(f'Epoch: {epoch + 1:02}')
-            print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
-            print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+            #print(f'Epoch: {epoch + 1:02}')
+            #print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
+            #print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
 
 
         test_loss = test(model, test_loader, criterion)
@@ -341,3 +341,4 @@ def get_sql(question):
     #   print(f"Generated SQL Query: {sql_query}")
         corrected_sql_query = correct_sql_by_gpt3(user_input, sql_query)
         print(f"final SQL Query: {corrected_sql_query}")
+    return corrected_sql_query
