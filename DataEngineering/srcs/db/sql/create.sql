@@ -53,3 +53,18 @@ CREATE TABLE IF NOT EXISTS stock_company (
     financial_currency VARCHAR(100),
     last_updated TIMESTAMP
 );
+
+CREATE TABLE finance_data (    
+
+    corp_code VARCHAR(10) NOT NULL,
+    Date DATE NOT NULL, 
+    concept_id VARCHAR(255) NOT NULL,
+    label_ko VARCHAR(255),
+    label_en VARCHAR(255),
+    class1 VARCHAR(255),
+    class2 VARCHAR(255),
+    class3 VARCHAR(255),
+    finance_statement INTEGER,
+
+    PRIMARY KEY (concept_id, Date, corp_code)
+);
