@@ -8,6 +8,7 @@ data
 # Model Experiments
 ML/Test
 ML/knn/model.pth
+ML/models.Apple.jpg
 
 ### virtual env & DB ### 
 DataEngineering/de/

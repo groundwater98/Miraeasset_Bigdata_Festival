@@ -341,3 +341,4 @@ def get_sql(question):
     #   print(f"Generated SQL Query: {sql_query}")
         corrected_sql_query = correct_sql_by_gpt3(user_input, sql_query)
         print(f"final SQL Query: {corrected_sql_query}")
+    return corrected_sql_query
